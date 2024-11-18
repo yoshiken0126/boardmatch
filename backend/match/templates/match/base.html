@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>来ました</title>
+</head>
+<body>
+<a>ようこそ、{{ user.username }}さん</a>
+<a href="{% url　'accounts:login' %}">ログイン</a>
+<a href="{% url　'accounts:logout' %}">ログアウト</a>
+
+<h4>マスター機能</h4>
+<a href="http://127.0.0.1:8000/admin/">管理画面へ</a>
+<a href="{% url　'accounts:add_cafe' %}">カフェ登録</a>
+<a href="{% url　'accounts:add_game' %}">ゲーム登録</a>
+
+
+<h4>カフェ機能</h4>
+<a href="{% url　'accounts:cafe_signup' %}">スタッフ登録</a>
+<a href="{% url　'cafes:register_boardgame' %}">ゲーム登録</a>
+<a href="{% url　'cafes:staff_can_instruct' %}">インスト可能</a>
+<a href="{% url　'cafes:show_cafe_schedule' %}">カフェスケジュール</a>
+
+<h4>ユーザー機能</h4>
+<a href="{% url　'accounts:signup' %}">ユーザー登録</a>
+<a href="{% url　'match:can_visit_cafe' %}">行けるカフェ</a>
+<a href="{% url　'match:can_visit_time' %}">行ける曜日</a>
+<a href="{% url　'match:optimize' %}">最適化</a>
+<a href="{% url　'cafes:otamesi' %}">お試し</a>
+<br>
+<a href="{% url　'match:user_can_instruct' %}">説明可能なゲーム</a>
+<a href="{% url　'match:user_want_to_play' %}">やりたいゲーム</a>
+<a href="{% url　'match:user_may_follow' %}">メイフォロー</a>
+<a href="{% url　'match:user_must_follow' %}">マストフォロー</a>
+
+{% block cafe %}{% endblock %}
+
+{% block update %}{% endblock %}
+
+</body>
+</html>

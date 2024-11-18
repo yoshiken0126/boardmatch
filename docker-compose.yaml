@@ -1,0 +1,36 @@
+version: '3'
+services:
+  frontend:
+    build:
+      context: ./frontend
+    command: npm run dev
+    tty: true
+    volumes:
+      - ./frontend:/frontend
+    ports:
+      - 3000:3000
+    env_file:
+      - ./.env.dev
+    environment:
+      - WATCHPACK_POLLING=true
+  backend:
+    build:
+      context: ./backend
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    tty: true
+    volumes:
+      - ./backend:/backend
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+    env_file:
+      - ./.env.dev
+  db:
+    image: postgres
+    env_file:
+      - ./.env.dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+volumes:
+  postgres_data:

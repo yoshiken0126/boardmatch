@@ -1,0 +1,29 @@
+{% extends 'match/base.html' %}
+
+{% block cafe %}
+  {% for matchday in matchdays %}
+    <div>
+        <h3>{{ matchday.day }}</h3>
+        <p>カフェ: {{ matchday.cafe.name }}</p>
+        <p>ゲーム: {{ matchday.game.name }}</p>
+        <p>候補:{% for game_choice in matchday.game_relations.all %}
+                {{ game_choice.game.name }}
+            {% endfor %}</p>
+
+        <p>参加ユーザー:{% for participant in matchday.user_relations.all %}
+                {{ participant.user.username }}
+            {% endfor %}</p>
+
+
+
+
+    </div>
+{% empty %}
+    <p>現在、参加予定のゲーム会はありません。</p>
+{% endfor %}
+
+{% endblock %}
+
+{% block update %}
+
+{% endblock %}

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>訪問可否更新</title>
+</head>
+<body>
+    <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        <table>
+            <tr>
+                <th></th>
+                <th>ユーザー</th>
+                <th>カフェ</th>
+                <th>訪問可否</th>
+            </tr>
+            {% for form in formset %}
+            <tr>
+                <td>{{ form.id }}</td>
+                <td>{{ form.user }}</td>
+                <td>{{ form.cafe }}</td>
+                <td>{{ form.can_visit }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <input type="submit" value="更新">
+    </form>
+</body>
+</html>

@@ -5,16 +5,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import axios from 'axios';
 
 export default function SignupForm() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    setError('')
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
     if (!username || !password || !confirmPassword) {
       setError('すべてのフィールドを入力してください。')
@@ -26,10 +29,36 @@ export default function SignupForm() {
       return
     }
 
+    try {
+      // axiosを使ってサインアップのリクエストを送る
+      const response = await axios.post('http://localhost:8000/accounts/api/signup/', {
+        username,
+        password,
+      });
+
+      // レスポンスが成功した場合
+      if (response.status === 201) {
+        console.log('サインアップ成功:', response.data);
+        // 成功時の処理（リダイレクトや成功メッセージなど）
+      } else {
+        // サーバーがエラーレスポンスを返した場合
+          console.log('サーバーエラーレスポンス:', response);
+        setError('サインアップに失敗しました。再試行してください。');
+      }
+    } catch (error) {
+      // ネットワークエラーやサーバーエラー時の処理
+      console.error('サインアップエラー:', error);
+      setError('サインアップ中にエラーが発生しました。再試行してください。');
+    } finally {
+      setLoading(false); // ローディング状態を解除
+    }
+  
+  
+
     // ここでサインアップのロジックを実装します
-    console.log('サインアップ:', { username, password })
+    //console.log('サインアップ:', { username, password })
     // 通常はここでAPIを呼び出してユーザーを登録します
-  }
+  };
 
   return (
     <div className="flex justify-center items-center mt-20">
@@ -72,7 +101,7 @@ export default function SignupForm() {
           {error && <p className="text-red-500" role="alert">{error}</p>}
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="w-full">サインアップ</Button>
+          <Button type="submit" className="w-full" disabled={loading}>サインアップ</Button>
         </CardFooter>
       </form>
     </Card>

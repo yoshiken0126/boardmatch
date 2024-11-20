@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'cafes.apps.CafesConfig',
     'rest_framework',
     'corsheaders',
+    'rest_framework_simplejwt',
 ]
 
 MIDDLEWARE = [
@@ -142,3 +143,15 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT認証を使用
+    ],
+}
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), #アクセストークンの有効期限を60分に設定しています
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1), #リフレッシュトークンの有効期限を1日に設定しています
+}

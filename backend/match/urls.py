@@ -2,6 +2,7 @@
 from django.urls import path
 from . import views
 
+
 app_name = 'match'
 urlpatterns = [
     path('frontpage/',views.show_frontpage,name='frontpage'),
@@ -12,5 +13,8 @@ urlpatterns = [
     path('user_may_follow/', views.user_may_follow, name='user_may_follow'),
     path('user_must_follow/', views.user_must_follow, name='user_must_follow'),
     path('optimize/',views.try_optimize,name='optimize'),
+
     path('api/',views.BoardGameListCreate.as_view(),name='boardgame_list'),
+    
+
 ]

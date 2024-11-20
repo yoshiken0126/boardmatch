@@ -7,9 +7,9 @@ class CustomUserSerializer(serializers.ModelSerializer): #追記　Userのシリ
         fields = ('id', 'username','password')
         extra_kwargs = {'password':{'write_only': True}} #パスワードフィールドを書き込み専用にする
     
-    #def create(self, validated_data):　#create時にcreate_userメソッドを使用
-        #user = User.objects.create_user(**validated_data)
-        #return user
+    def create(self, validated_data):#create時にcreate_userメソッドを使用
+        user = CustomUser.objects.create_user(**validated_data)
+        return user
 
 class CafeStaffSerializer(serializers.ModelSerializer): #salonのシリアライザー
     class Meta:

@@ -9,6 +9,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import CustomUserSerializer
+from rest_framework.permissions import IsAuthenticated
+
 
 class CustomUserSignup(APIView):
     def post(self, request):
@@ -18,6 +20,12 @@ class CustomUserSignup(APIView):
             return Response({"message": "ユーザー登録が完了しました"}, status=status.HTTP_201_CREATED)#post成功時のレスポンス
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)#エラー時のレスポンス
 
+class UserInfoView(APIView): #追記
+    permission_classes = [IsAuthenticated] #ログイン中のユーザーのみアクセス可能とする
+
+    def get(self, request):
+        serializer = CustomUserSerializer(request.user) 
+        return Response(serializer.data) #getメソッドでユーザーの情報を取得
 
 
 

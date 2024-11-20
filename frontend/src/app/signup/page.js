@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import axios from 'axios';
+import { useRouter } from 'next/navigation'; 
 
 export default function SignupForm() {
   const [username, setUsername] = useState('')
@@ -13,6 +14,7 @@ export default function SignupForm() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,6 +42,7 @@ export default function SignupForm() {
       if (response.status === 201) {
         console.log('サインアップ成功:', response.data);
         // 成功時の処理（リダイレクトや成功メッセージなど）
+        router.push('/boardgame');
       } else {
         // サーバーがエラーレスポンスを返した場合
           console.log('サーバーエラーレスポンス:', response);

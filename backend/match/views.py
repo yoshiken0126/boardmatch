@@ -15,8 +15,10 @@ from mip import Model,maximize,xsum
 from django.contrib.auth.mixins import LoginRequiredMixin
 import numpy as np
 import datetime,random
+
 from .serializers import BoardGameSerializer
 from rest_framework import generics
+
 
 # Create your views here.
 class BoardGameListCreate(generics.ListCreateAPIView):

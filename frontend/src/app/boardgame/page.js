@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle,CardDescription,CardFooter } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import Navbar from '@/components/navbar'
 
 export default function Home() {
   const[boardgames,setBoardgames] = useState([]);
@@ -19,6 +20,7 @@ export default function Home() {
 
   return(
     <div>
+     <div> <Navbar /></div>
       {boardgames.length === 0 ?(
         <p>ボードゲームは登録されていません</p>
       ) : (

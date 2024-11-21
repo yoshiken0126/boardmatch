@@ -5,15 +5,31 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginFormJsx() {
+  const { login } = useAuth();
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-
-  const handleSubmit = (event) => {
+  const [error, setError] = useState('');
+  const handleSubmit = async (event) => {
     event.preventDefault()
     // ここでログイン処理を行います。実際のアプリケーションでは、
     // この部分でバックエンドAPIを呼び出すなどの処理を行います。
+    try {
+      const success = await login(username, password);  // login関数を呼び出す
+
+      if (success) {
+        // ログイン成功時の処理。例えば、ダッシュボードにリダイレクトなど。
+        console.log('Login successful!');       
+      } else {
+        // ログイン失敗時のエラーハンドリング
+        setError('ユーザー名またはパスワードが間違っています。');
+      }
+    } catch (err) {
+      console.error('Error during login:', err);
+      setError('ログイン処理中にエラーが発生しました。');
+    }
     console.log('Login attempt', { username, password })
   }
 

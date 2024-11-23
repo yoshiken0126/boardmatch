@@ -15,6 +15,7 @@ urlpatterns = [
     path('optimize/',views.try_optimize,name='optimize'),
 
     path('api/',views.BoardGameListCreate.as_view(),name='boardgame_list'),
+    path('api/user_may_follow',views.MayFollowView.as_view(),name='user_may_follow'),
     
 
 ]

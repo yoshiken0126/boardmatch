@@ -1,5 +1,5 @@
 'use client'
-
+import axios from 'axios';
 import React, { useState,useEffect } from 'react'
 import Link from 'next/link'
 import jwtDecode from 'jwt-decode'
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Menu } from 'lucide-react'
+import { useAuth } from '@/app/context/AuthContext';
 
 
 // ユーザードロップダウンコンポーネント
@@ -58,6 +59,41 @@ function UserDropdown({ user }) {
 // メインのナビゲーションバーコンポーネント
 export default function Navbar() {
   
+  const API_URL = 'http://localhost:8000/accounts/user-info/'; // DjangoのAPIエンドポイント
+  const [userData, setUserData] = useState(null); 
+
+  const getUserInfo = async () => {
+    try {
+      // ローカルストレージからJWTトークンを取得
+      const token = localStorage.getItem('token');
+  
+      // Authorizationヘッダーにトークンを設定
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+  
+      // APIにリクエスト
+      const response = await axios.get(API_URL, config);
+      const userData = response.data;
+
+      setUserData(userData);
+  
+      // 取得したユーザー情報を表示
+      console.log(userData);
+  
+    } catch (error) {
+      console.error(error);
+      // エラー処理 (例: トークンが期限切れの場合、ログイン画面にリダイレクト)
+    }
+  };
+  
+  useEffect(() => {
+    getUserInfo();
+  }, []);
+
+
   const user = {
     name: '山田太郎',
     email: 'taro@example.com',
@@ -66,6 +102,11 @@ export default function Navbar() {
 
 
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  const { logout } = useAuth();
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     (<nav className="bg-white shadow">
@@ -96,8 +137,19 @@ export default function Navbar() {
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
-          {user && <span className="text-sm font-medium text-gray-700">ようこそ、{user.name}さん</span>}
+          {userData ? (  // userDataがnullでない場合に表示
+              <span className="text-sm font-medium text-gray-700">
+                ようこそ、{userData.username}さん
+              </span>
+            ) : (
+              <span className="text-sm font-medium text-gray-700">
+                ローディング中...
+              </span>
+            )}
             <UserDropdown user={user} />
+          </div>
+          <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+            <button onClick={handleLogout}>ログアウト</button>
           </div>
           <div className="flex items-center sm:hidden">
             <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -132,7 +184,7 @@ export default function Navbar() {
                 </DropdownMenuLabel>
                 <DropdownMenuItem>プロフィール</DropdownMenuItem>
                 <DropdownMenuItem>設定</DropdownMenuItem>
-                <DropdownMenuItem>ログアウト</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>ログアウト</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

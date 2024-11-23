@@ -16,8 +16,11 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 import numpy as np
 import datetime,random
 
-from .serializers import BoardGameSerializer
+from .serializers import BoardGameSerializer,UserGameRelationSerializer
 from rest_framework import generics
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions
 
 
 # Create your views here.
@@ -26,6 +29,14 @@ class BoardGameListCreate(generics.ListCreateAPIView):
     serializer_class = BoardGameSerializer
 
 
+class MayFollowView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        relations = UserGameRelation.objects.filter(user=user)
+        serializer = UserGameRelationSerializer(relations, many=True)
+        return Response(serializer.data)
 
 
 

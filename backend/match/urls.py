@@ -1,7 +1,12 @@
 
-from django.urls import path
+from django.urls import path,include
 from . import views
+from rest_framework.routers import DefaultRouter
+from .views import UserGameRelationViewSet
 
+
+router = DefaultRouter()
+router.register(r'user_game_relations', UserGameRelationViewSet,basename='user_game_relation')
 
 app_name = 'match'
 urlpatterns = [
@@ -15,7 +20,8 @@ urlpatterns = [
     path('optimize/',views.try_optimize,name='optimize'),
 
     path('api/',views.BoardGameListCreate.as_view(),name='boardgame_list'),
-    path('api/user_may_follow',views.MayFollowView.as_view(),name='user_may_follow'),
-    
+    path('api/user_game_follow',views.GameFollowView.as_view(),name='user_may_follow'),
+    path('api/', include(router.urls)),
 
 ]
+

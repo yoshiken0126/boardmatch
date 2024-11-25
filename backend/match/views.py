@@ -20,7 +20,7 @@ from .serializers import BoardGameSerializer,UserGameRelationSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import permissions
+from rest_framework import permissions,viewsets
 
 
 # Create your views here.
@@ -29,7 +29,7 @@ class BoardGameListCreate(generics.ListCreateAPIView):
     serializer_class = BoardGameSerializer
 
 
-class MayFollowView(APIView):
+class GameFollowView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -38,6 +38,17 @@ class MayFollowView(APIView):
         serializer = UserGameRelationSerializer(relations, many=True)
         return Response(serializer.data)
 
+class UserGameRelationViewSet(viewsets.ModelViewSet):
+    serializer_class = UserGameRelationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    def get_queryset(self):
+        # ログイン中のユーザーに関連するUserGameRelationを返す
+        return UserGameRelation.objects.filter(user=self.request.user)
+    def perform_create(self, serializer):
+        # 現在のユーザーを自動的に設定
+        user = self.request.user
+        customuser = CustomUser.objects.get(username=user.username)
+        serializer.save(user=customuser)
 
 
 

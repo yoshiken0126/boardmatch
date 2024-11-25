@@ -26,7 +26,7 @@ export default function Home() {
 
 
      // ユーザーが持っているボードゲームを取得する（仮にユーザーIDが必要ならその情報を使用）
-    axios.get('http://localhost:8000/match/api/user_may_follow',{
+    axios.get('http://localhost:8000/match/api/user_game_follow',{
       headers: {
           Authorization: `Bearer ${token}`,
       },
@@ -52,6 +52,50 @@ export default function Home() {
      });
      
   },[]);
+
+   // スイッチの状態が変更されたときに呼ばれる関数
+   const handleSwitchChange = async (gameId, checked) => {
+    try {
+      if (checked) {
+        // スイッチがオンになった場合：データを作成
+        const response = await axios.post(
+          'http://localhost:8000/match/api/user_game_relations/',
+          { game: gameId, want_to_play: true },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        console.log('データが作成されました:', response.data);
+      } else {
+        // スイッチがオフになった場合：データを削除
+        const response = await axios.delete(
+          `http://localhost:8000/match/api/user_game_relations/${gameId}/`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        console.log('データが削除されました');
+      }
+
+      // スイッチの状態を更新
+      setSwitchStates(prev => ({
+        ...prev,
+        [gameId]: checked
+      }));
+
+    } catch (error) {
+      console.error('エラーが発生しました:', error);
+      // エラーが発生した場合は、スイッチを元の状態に戻す
+      setSwitchStates(prev => ({
+        ...prev,
+        [gameId]: !checked
+      }));
+    }
+  };
   
   const handleOn = () => {
     console.log('スイッチはオンです');
@@ -75,7 +119,10 @@ export default function Home() {
               <CardHeader className='text-2xl font-bold rounded'>{boardgame.name}</CardHeader>
               <CardContent>こんなかんじでどうでしょう。改行ってどうやるんだろ？分からんけどまあいい感じに説明できるといいよね。</CardContent>
               <div className="absolute top-4 right-4">
-              <Switch checked={switchStates[boardgame.id] || false}  />
+              <Switch    
+              checked={switchStates[boardgame.id] || false}  
+              onCheckedChange={(checked) => handleSwitchChange(boardgame.id, checked)}
+              />
               </div>
               </Card>
           ))}

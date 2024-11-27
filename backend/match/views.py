@@ -31,15 +31,6 @@ class BoardGameListCreate(generics.ListCreateAPIView):
     serializer_class = BoardGameSerializer
 
 
-class GameFollowView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-        relations = UserGameRelation.objects.filter(user=user)
-        serializer = UserGameRelationSerializer(relations, many=True)
-        return Response(serializer.data)
-
 class UserGameRelationViewSet(viewsets.ModelViewSet):
     serializer_class = UserGameRelationSerializer
     permission_classes = [permissions.IsAuthenticated]

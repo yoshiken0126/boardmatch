@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle,CardDescription,CardFooter } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import Navbar from '@/components/navbar'
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { getToken } from '@/lib/auth';
 
 export default function Home() {
@@ -15,7 +15,7 @@ export default function Home() {
   
   useEffect(() => {
    
-    axios.get('http://localhost:8000/match/api/')
+    axios.get('http://localhost:8000/match/api/boardgame_list/')
       .then(response => {
         setBoardgames(response.data);
         console.log(response.data);
@@ -26,30 +26,28 @@ export default function Home() {
 
 
      // ユーザーが持っているボードゲームを取得する（仮にユーザーIDが必要ならその情報を使用）
-    axios.get('http://localhost:8000/match/api/user_game_follow',{
+     axios.get('http://localhost:8000/match/api/user_game_relations/', {
       headers: {
-          Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
-    })  // ユーザーのボードゲーム情報
-     .then(response => {
-       setUserBoardGames(response.data);
-       const usergames = response.data;
-       console.log(usergames);
-       const initialSwitchStates = usergames.reduce((acc, game) => {
+    })
+    .then(response => {
+      setUserBoardGames(response.data);
+      const usergames = response.data;
+      console.log(usergames);
+
+      // ユーザーのボードゲーム情報を元にスイッチ状態を初期化
+      const initialSwitchStates = usergames.reduce((acc, game) => {
         acc[game.game] = game.want_to_play; // `want_to_play` をスイッチ状態として設定
         return acc;
       }, {});
 
       setSwitchStates(initialSwitchStates);
-        console.log(usergames);
-
-
-
-     })
-     .catch(error => {
-       console.error("ユーザーのボードゲーム情報取得エラー", error);
-       //console.log(token);
-     });
+      console.log(usergames);
+    })
+    .catch(error => {
+      console.error("ユーザーのボードゲーム情報取得エラー", error);
+    });
      
   },[]);
 
@@ -69,34 +67,60 @@ export default function Home() {
         );
         console.log('データが作成されました:', response.data);
       } else {
-        // スイッチがオフになった場合：データを削除
-        const response = await axios.delete(
-          `http://localhost:8000/match/api/user_game_relations/${gameId}/`,
+        
+        const relationsResponse = await axios.get(
+          `http://localhost:8000/match/api/user_game_relations/?game_id=${gameId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         );
-        console.log('データが削除されました');
+        
+        console.log(`ゲームID: ${gameId} に関連するリレーションデータ:`, relationsResponse.data);
+  
+        // ユーザーゲームリレーションが見つかった場合
+        if (relationsResponse.data.length > 0) {
+          // 関連するリレーションのIDを取得
+          const relationToDelete = relationsResponse.data.find(relation => relation.game === gameId);
+  
+          if (relationToDelete) {
+            console.log(`削除対象のリレーションID: ${relationToDelete.id}`);
+            
+            // 削除リクエスト
+            const deleteResponse = await axios.delete(
+              `http://localhost:8000/match/api/user_game_relations/${relationToDelete.id}/`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            
+            // 削除後のレスポンスを確認
+            console.log('データが削除されました:', deleteResponse.data);
+          } else {
+            console.log('関連するユーザーゲームリレーションが見つかりません');
+          }
+        } else {
+          console.log('ゲームIDに関連するリレーションが存在しません');
+        }
       }
-
       // スイッチの状態を更新
       setSwitchStates(prev => ({
         ...prev,
-        [gameId]: checked
+        [gameId]: checked,
       }));
-
     } catch (error) {
       console.error('エラーが発生しました:', error);
       // エラーが発生した場合は、スイッチを元の状態に戻す
       setSwitchStates(prev => ({
         ...prev,
-        [gameId]: !checked
+        [gameId]: !checked,
       }));
     }
   };
-  
+
   const handleOn = () => {
     console.log('スイッチはオンです');
   };

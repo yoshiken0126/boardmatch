@@ -21,6 +21,8 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions,viewsets
+from .filters import UserGameRelationFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 # Create your views here.
@@ -41,15 +43,35 @@ class GameFollowView(APIView):
 class UserGameRelationViewSet(viewsets.ModelViewSet):
     serializer_class = UserGameRelationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = (DjangoFilterBackend,)  # フィルタリング用バックエンドを指定
+    filterset_class = UserGameRelationFilter  # 使用するフィルタクラスを指定
+
     def get_queryset(self):
         # ログイン中のユーザーに関連するUserGameRelationを返す
-        return UserGameRelation.objects.filter(user=self.request.user)
+        user = self.request.user
+        return UserGameRelation.objects.filter(user=user)
     def perform_create(self, serializer):
         # 現在のユーザーを自動的に設定
         user = self.request.user
         customuser = CustomUser.objects.get(username=user.username)
         serializer.save(user=customuser)
 
+    def get_object(self):
+        print(f"リクエストされたpk: {self.kwargs.get('pk')}")
+        return super().get_object()
+    
+    def destroy(self, request, *args, **kwargs):
+        # インスタンスの所有者チェック
+        instance = self.get_object()
+        print(f"削除するインスタンス: {instance}")  # インスタンスのログを出力
+        user = self.request.user
+        customuser = CustomUser.objects.get(username=user.username)
+        if instance.user != customuser:
+            return Response(
+                {"detail": "You do not have permission to delete this object."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().destroy(request, *args, **kwargs)
 
 
 

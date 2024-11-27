@@ -10,4 +10,6 @@ class BoardGameSerializer(serializers.ModelSerializer):
 class UserGameRelationSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserGameRelation
-        fields = ['id','game','want_to_play']
+        #fields = ['id','game','want_to_play']
+        fields = ['id', 'user', 'game', 'want_to_play']
+        read_only_fields = ['user']

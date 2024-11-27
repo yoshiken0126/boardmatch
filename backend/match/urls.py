@@ -19,8 +19,7 @@ urlpatterns = [
     path('user_must_follow/', views.user_must_follow, name='user_must_follow'),
     path('optimize/',views.try_optimize,name='optimize'),
 
-    path('api/',views.BoardGameListCreate.as_view(),name='boardgame_list'),
-    path('api/user_game_follow',views.GameFollowView.as_view(),name='user_may_follow'),
+    path('api/boardgame_list/',views.BoardGameListCreate.as_view(),name='boardgame_list'),
     path('api/', include(router.urls)),
 
 ]

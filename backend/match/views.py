@@ -16,7 +16,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 import numpy as np
 import datetime,random
 
-from .serializers import BoardGameSerializer,UserGameRelationSerializer
+from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserFreeTimeSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -63,6 +63,33 @@ class UserGameRelationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         return super().destroy(request, *args, **kwargs)
+
+
+class UserFreeTimeViewSet(viewsets.ModelViewSet):
+    queryset = UserFreeTime.objects.all()
+    serializer_class = UserFreeTimeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # ログインしているユーザーに関連するUserFreeTimeだけを返す
+        return UserFreeTime.objects.filter(user=self.request.user)
+
+    def partial_update(self, request, *args, **kwargs):
+        # 部分的な更新処理
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)  # 部分的更新
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data)
+
+    def perform_update(self, serializer):
+        # ユーザーを自動的にセット
+        user = self.request.user
+        customuser = CustomUser.objects.get(username=user.username)
+        serializer.save(user=customuser)
+
+    
 
 
 

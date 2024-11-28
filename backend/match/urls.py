@@ -2,11 +2,12 @@
 from django.urls import path,include
 from . import views
 from rest_framework.routers import DefaultRouter
-from .views import UserGameRelationViewSet
+from .views import UserGameRelationViewSet,UserFreeTimeViewSet
 
 
 router = DefaultRouter()
 router.register(r'user_game_relations', UserGameRelationViewSet,basename='user_game_relation')
+router.register(r'user_freetimes', UserFreeTimeViewSet, basename='user_freetime')
 
 app_name = 'match'
 urlpatterns = [

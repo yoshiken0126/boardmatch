@@ -34,7 +34,8 @@ export default function LoginFormJsx() {
   }
 
   return (
-    (<Card className="w-full max-w-sm mx-auto">
+    (<div className="flex justify-center items-center mt-20">
+    <Card className="w-full max-w-sm mx-auto">
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center">ログイン</CardTitle>
       </CardHeader>
@@ -64,8 +65,8 @@ export default function LoginFormJsx() {
         </form>
       </CardContent>
       <CardFooter className="text-center text-sm text-muted-foreground">
-        アカウント登録は<a href="#" className="text-primary hover:underline">こちら</a>
+        アカウント登録は<a href="http://localhost:3000/signup" className="text-primary hover:underline">こちら</a>
       </CardFooter>
-    </Card>)
+    </Card></div>)
   );
 }

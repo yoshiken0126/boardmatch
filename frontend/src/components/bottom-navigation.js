@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Home, Search, User } from 'lucide-react'
+import { Coffee, Hexagon, Home, Search, User,Hourglass, UserRound } from 'lucide-react'
 
 const BottomNavigation = () => {
   const pathname = usePathname()
@@ -14,9 +14,10 @@ const BottomNavigation = () => {
   }, [pathname])
 
   const navItems = [
-    { path: '/', icon: Home, label: 'ホーム' },
-    { path: '/search', icon: Search, label: '検索' },
-    { path: '/profile', icon: User, label: 'プロフィール' },
+    { path: '/boardgame', icon: Hexagon, label: '' },
+    { path: '/user', icon: UserRound, label: '' },
+    { path: '/cafe', icon: Coffee, label: '' },
+    { path: '/freetime', icon: Hourglass, label: '' },
   ]
 
   return (

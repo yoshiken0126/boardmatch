@@ -42,7 +42,7 @@ export default function SignupForm() {
       if (response.status === 201) {
         console.log('サインアップ成功:', response.data);
         // 成功時の処理（リダイレクトや成功メッセージなど）
-        router.push('/boardgame');
+        router.push('/login');
       } else {
         // サーバーがエラーレスポンスを返した場合
           console.log('サーバーエラーレスポンス:', response);

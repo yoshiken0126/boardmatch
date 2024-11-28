@@ -133,7 +133,7 @@ export default function Home() {
 
   return(
     <div>
-     <div> <Navbar /></div>
+     
       {boardgames.length === 0 ?(
         <p>ボードゲームは登録されていません</p>
       ) : (

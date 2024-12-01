@@ -2,12 +2,15 @@
 from django.urls import path,include
 from . import views
 from rest_framework.routers import DefaultRouter
-from .views import UserGameRelationViewSet,UserFreeTimeViewSet
+from .views import UserGameRelationViewSet,UserCafeRelationViewSet,UserFreeTimeViewSet,UserRelationViewSet
 
 
 router = DefaultRouter()
 router.register(r'user_game_relations', UserGameRelationViewSet,basename='user_game_relation')
+router.register(r'user_cafe_relations', UserCafeRelationViewSet,basename='user_cafe_relation')
 router.register(r'user_freetimes', UserFreeTimeViewSet, basename='user_freetime')
+router.register(r'user_relations', UserRelationViewSet, basename='user_relation')
+
 
 app_name = 'match'
 urlpatterns = [
@@ -21,6 +24,7 @@ urlpatterns = [
     path('optimize/',views.try_optimize,name='optimize'),
 
     path('api/boardgame_list/',views.BoardGameListCreate.as_view(),name='boardgame_list'),
+    path('api/cafe_list/',views.BoardGameCafeList.as_view(),name='cafe_list'),
     path('api/', include(router.urls)),
 
 ]

@@ -8,3 +8,4 @@ class UserGameRelationFilter(django_filters.FilterSet):
     class Meta:
         model = UserGameRelation
         fields = ['game_id', 'user_id']
+

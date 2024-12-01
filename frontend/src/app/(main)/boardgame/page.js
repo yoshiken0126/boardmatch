@@ -141,7 +141,7 @@ export default function Home() {
           {boardgames.map(boardgame => (
             <Card key={boardgame.id} className="relative">
               <CardHeader className='text-2xl font-bold rounded'>{boardgame.name}</CardHeader>
-              <CardContent>こんなかんじでどうでしょう。改行ってどうやるんだろ？分からんけどまあいい感じに説明できるといいよね。</CardContent>
+              <CardContent>こちらに詳細情報が記載されます。</CardContent>
               <div className="absolute top-4 right-4">
               <Switch    
               checked={switchStates[boardgame.id] || false}  

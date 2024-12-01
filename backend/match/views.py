@@ -16,7 +16,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 import numpy as np
 import datetime,random
 
-from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserFreeTimeSerializer
+from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -29,6 +29,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 class BoardGameListCreate(generics.ListCreateAPIView):
     queryset = BoardGame.objects.all()
     serializer_class = BoardGameSerializer
+
+class BoardGameCafeList(generics.ListCreateAPIView):
+    queryset = BoardGameCafe.objects.all()
+    serializer_class = BoardGameCafeSerializer
 
 
 class UserGameRelationViewSet(viewsets.ModelViewSet):
@@ -89,7 +93,32 @@ class UserFreeTimeViewSet(viewsets.ModelViewSet):
         customuser = CustomUser.objects.get(username=user.username)
         serializer.save(user=customuser)
 
-    
+
+class UserCafeRelationViewSet(viewsets.ModelViewSet):
+    queryset = UserCafeRelation.objects.all()
+    serializer_class = UserCafeRelationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class UserRelationViewSet(viewsets.ModelViewSet):
+    queryset = UserRelation.objects.all()
+    serializer_class = UserRelationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # ログイン中のユーザーに関連するUserGameRelationを返す
+        user = self.request.user
+        return UserRelation.objects.filter(from_user=user)
+
+
+
+
+
+
+
+
+
+
 
 
 

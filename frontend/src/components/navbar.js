@@ -20,6 +20,11 @@ import { useAuth } from '@/app/context/AuthContext';
 // ユーザードロップダウンコンポーネント
 function UserDropdown({ user }) {
   if (!user) return null;  // userがnullの場合は何も表示しない
+  
+  const { logout } = useAuth();
+  const handleLogout = () => {
+    logout();
+  };
  
   return (
     (<DropdownMenu>
@@ -48,7 +53,7 @@ function UserDropdown({ user }) {
           設定
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={handleLogout}>
           ログアウト
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -148,9 +153,7 @@ export default function Navbar() {
             )}
             <UserDropdown user={user} />
           </div>
-          <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
-            <button onClick={handleLogout}>ログアウト</button>
-          </div>
+          
           <div className="flex items-center sm:hidden">
             <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <DropdownMenuTrigger asChild>

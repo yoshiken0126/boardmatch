@@ -75,16 +75,23 @@ export default function Navbar() {
 
       // トークンからユーザーIDを取得
       const userId = JSON.parse(atob(token.split('.')[1])).user_id;
+      console.log('User ID:', userId); 
+
       const response = await axios.get(`http://localhost:8000/match/api/user_info/${userId}/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const userData = response.data;
-      setUserData(userData);
-      setIsOptimizeActive(userData.is_optimize_active); // 初期状態として設定
-      console.log(userData);
+      if (response.status === 200) {
+        const userData = response.data;
+        console.log('取得したユーザーデータ:', userData); // 取得したデータを確認
+        setUserData(userData);
+        setIsOptimizeActive(userData.is_optimize_active); // 初期状態として設定
+      } else {
+        console.error('ユーザー情報の取得に失敗しました', response);
+      }
+      
     } catch (error) {
       console.error('ユーザー情報の取得に失敗しました:', error);
     }
@@ -119,6 +126,7 @@ export default function Navbar() {
 
   useEffect(() => {
     getUserInfo(); // 初期データの取得
+    
   }, []);
 
   const user = {

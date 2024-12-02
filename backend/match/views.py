@@ -121,8 +121,9 @@ class UserInfoViewSet(viewsets.GenericViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         # ログインユーザーの情報を取得してシリアライズして返す
-        user = self.get_object()
-        serializer = self.get_serializer(user)
+        user = self.request.user
+        customuser = CustomUser.objects.get(username=user.username)
+        serializer = self.get_serializer(customuser)
         return Response(serializer.data)
 
     def patch(self, request, *args, **kwargs):
@@ -306,7 +307,7 @@ def try_optimize(request):
     user_index_map = {user.id: index for index, user in enumerate(active_users)}
     num_users = len(active_users)
     num_cafes = len(cafes)
-    num_days = 7
+    num_days = 14
 
     list2 = []
     data = []

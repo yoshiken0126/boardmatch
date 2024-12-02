@@ -19,7 +19,13 @@ class UserCafeRelationForm(forms.ModelForm):
 class UserFreeTimeForm(forms.ModelForm):
     class Meta:
         model = UserFreeTime
-        fields = ['user','monday','tuesday','wednesday','thursday','friday','saturday','sunday']
+        fields = ['user','monday_daytime', 'monday_nighttime',
+                         'tuesday_daytime', 'tuesday_nighttime',
+                         'wednesday_daytime', 'wednesday_nighttime', 
+                         'thursday_daytime', 'thursday_nighttime', 
+                         'friday_daytime', 'friday_nighttime', 
+                         'saturday_daytime', 'saturday_nighttime', 
+                         'sunday_daytime', 'sunday_nighttime']
 
 class UserGameRelationForm(forms.ModelForm):
     class Meta:

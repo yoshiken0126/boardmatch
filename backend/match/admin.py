@@ -10,7 +10,13 @@ class CustomRelationAdmin(admin.ModelAdmin):
     list_filter = ('user','can_visit',)
 
 class CustomFreeAdmin(admin.ModelAdmin):
-    list_display = ('user', 'monday','tuesday','wednesday','thursday','friday','saturday','sunday')
+    list_display = ('user','monday_daytime', 'monday_nighttime',
+                         'tuesday_daytime', 'tuesday_nighttime',
+                         'wednesday_daytime', 'wednesday_nighttime', 
+                         'thursday_daytime', 'thursday_nighttime', 
+                         'friday_daytime', 'friday_nighttime', 
+                         'saturday_daytime', 'saturday_nighttime', 
+                         'sunday_daytime', 'sunday_nighttime')
 
 class MatchDayAdmin(admin.ModelAdmin):
     list_display = ('day','cafe','game','group','choices')

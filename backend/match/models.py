@@ -9,22 +9,36 @@ from django.forms import BooleanField
 
 class UserFreeTime(models.Model):
     user = models.ForeignKey('accounts.CustomUser', on_delete=models.CASCADE)
-    monday = models.BooleanField(default=False,verbose_name='月')
-    tuesday = models.BooleanField(default=False,verbose_name='火')
-    wednesday = models.BooleanField(default=False,verbose_name='水')
-    thursday = models.BooleanField(default=False,verbose_name='木')
-    friday = models.BooleanField(default=False,verbose_name='金')
-    saturday = models.BooleanField(default=False,verbose_name='土')
-    sunday = models.BooleanField(default=False,verbose_name='日')
+    monday_daytime = models.BooleanField(default=False,verbose_name='月昼')
+    monday_nighttime = models.BooleanField(default=False,verbose_name='月夜')
+    tuesday_daytime = models.BooleanField(default=False,verbose_name='火昼')
+    tuesday_nighttime = models.BooleanField(default=False,verbose_name='火夜')
+    wednesday_daytime = models.BooleanField(default=False,verbose_name='水昼')
+    wednesday_nighttime = models.BooleanField(default=False,verbose_name='水夜')
+    thursday_daytime = models.BooleanField(default=False,verbose_name='木昼')
+    thursday_nighttime = models.BooleanField(default=False,verbose_name='木夜')
+    friday_daytime = models.BooleanField(default=False,verbose_name='金昼')
+    friday_nighttime = models.BooleanField(default=False,verbose_name='金夜')
+    saturday_daytime = models.BooleanField(default=False,verbose_name='土昼')
+    saturday_nighttime = models.BooleanField(default=False,verbose_name='土夜')
+    sunday_daytime = models.BooleanField(default=False,verbose_name='日昼')
+    sunday_nighttime = models.BooleanField(default=False,verbose_name='日夜')
     def as_list(self):
         return [
-            self.monday,
-            self.tuesday,
-            self.wednesday,
-            self.thursday,
-            self.friday,
-            self.saturday,
-            self.sunday,
+            self.monday_daytime,
+            self.monday_nighttime,
+            self.tuesday_daytime,
+            self.tuesday_nighttime,
+            self.wednesday_daytime,
+            self.wednesday_nighttime,
+            self.thursday_daytime,
+            self.thursday_nighttime,
+            self.friday_daytime,
+            self.friday_nighttime,
+            self.saturday_daytime,
+            self.saturday_nighttime,
+            self.sunday_daytime,
+            self.sunday_nighttime,
         ]
 
 class UserRelation(models.Model):

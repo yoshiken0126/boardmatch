@@ -54,4 +54,10 @@ def create_user_relations(sender, instance, created, **kwargs):
 def create_user_relations(sender, instance, created, **kwargs):
     if created:
         #for cafe_instance in BoardGameCafe.objects.all():
-            UserFreeTime.objects.create(user=instance,monday=False,tuesday=False,wednesday=False,thursday=False,friday=False,saturday=False,sunday=False)
+            UserFreeTime.objects.create(
+            user=instance,
+            monday_daytime=False, tuesday_daytime=False, wednesday_daytime=False, 
+            thursday_daytime=False, friday_daytime=False, saturday_daytime=False, sunday_daytime=False,
+            monday_nighttime=False, tuesday_nighttime=False, wednesday_nighttime=False,
+            thursday_nighttime=False, friday_nighttime=False, saturday_nighttime=False, sunday_nighttime=False
+        )

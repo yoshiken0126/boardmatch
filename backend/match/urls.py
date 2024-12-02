@@ -2,7 +2,7 @@
 from django.urls import path,include
 from . import views
 from rest_framework.routers import DefaultRouter
-from .views import UserGameRelationViewSet,UserCafeRelationViewSet,UserFreeTimeViewSet,UserRelationViewSet
+from .views import UserGameRelationViewSet,UserCafeRelationViewSet,UserFreeTimeViewSet,UserRelationViewSet,UserInfoViewSet
 
 
 router = DefaultRouter()
@@ -10,6 +10,7 @@ router.register(r'user_game_relations', UserGameRelationViewSet,basename='user_g
 router.register(r'user_cafe_relations', UserCafeRelationViewSet,basename='user_cafe_relation')
 router.register(r'user_freetimes', UserFreeTimeViewSet, basename='user_freetime')
 router.register(r'user_relations', UserRelationViewSet, basename='user_relation')
+router.register(r'user_info', UserInfoViewSet, basename='user_info')
 
 
 app_name = 'match'

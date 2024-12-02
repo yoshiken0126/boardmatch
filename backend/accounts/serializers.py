@@ -4,7 +4,7 @@ from .models import CustomUser,CafeStaff
 class CustomUserSerializer(serializers.ModelSerializer): #追記　Userのシリアライザー
     class Meta:
         model = CustomUser
-        fields = ('id', 'username','password')
+        fields = ('id', 'username','password','is_optimize_active')
         extra_kwargs = {'password':{'write_only': True}} #パスワードフィールドを書き込み専用にする
     
     def create(self, validated_data):#create時にcreate_userメソッドを使用

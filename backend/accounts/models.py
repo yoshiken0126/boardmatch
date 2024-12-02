@@ -15,7 +15,7 @@ class BaseUser(AbstractUser):
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
 
 class CustomUser(BaseUser):
-    is_optimize_active = models.BooleanField(default=False,verbose_name='アクティブ')
+    is_optimize_active = models.BooleanField(default=False,verbose_name='最適化アクティブ')
     def __str__(self):
         return self.username
 

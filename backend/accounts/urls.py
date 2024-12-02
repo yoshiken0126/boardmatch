@@ -17,5 +17,5 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),#ここでユーザー名とパスワードを送信してそれぞれのトークンを発行します。いわゆるログインです。
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),#ここではリフレッシュトークンを利用してアクセストークンを発行します。
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-    path('user-info/', UserInfoView.as_view(), name='user_info'),
+    path('user-info/', UserInfoView.as_view(), name='user-info'),
 ]

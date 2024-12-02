@@ -5,7 +5,7 @@ from django.views import generic
 from django.views.generic import TemplateView,CreateView
 from .forms import CustomUserCreationForm,CafeStaffCreationForm,BoardGameCafeForm,BoardGameForm
 from django.contrib.auth.views import LoginView,LogoutView
-from rest_framework import status 
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import CustomUserSerializer
@@ -26,6 +26,8 @@ class UserInfoView(APIView): #追記
     def get(self, request):
         serializer = CustomUserSerializer(request.user) 
         return Response(serializer.data) #getメソッドでユーザーの情報を取得
+
+
 
 
 

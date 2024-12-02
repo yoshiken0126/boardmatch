@@ -16,6 +16,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 import numpy as np
 import datetime,random
 
+from accounts.serializers import CustomUserSerializer
 from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
@@ -109,6 +110,33 @@ class UserRelationViewSet(viewsets.ModelViewSet):
         # ログイン中のユーザーに関連するUserGameRelationを返す
         user = self.request.user
         return UserRelation.objects.filter(from_user=user)
+
+class UserInfoViewSet(viewsets.GenericViewSet):
+    permission_classes = [permissions.IsAuthenticated]  # ログインユーザーのみアクセス可能
+    serializer_class = CustomUserSerializer
+
+    def get_object(self):
+        # ログインユーザーの情報を取得
+        return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        # ログインユーザーの情報を取得してシリアライズして返す
+        user = self.get_object()
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
+
+    def patch(self, request, *args, **kwargs):
+        # is_optimize_active フィールドを更新するために、PATCHリクエストを処理
+        user = self.request.user
+        customuser = CustomUser.objects.get(username=user.username)
+        
+
+        # リクエストデータを使って部分的に更新
+        serializer = self.get_serializer(customuser, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()  # ユーザー情報を保存
+            return Response(serializer.data)  # 更新したデータを返す
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 

@@ -96,9 +96,14 @@ class UserFreeTimeViewSet(viewsets.ModelViewSet):
 
 
 class UserCafeRelationViewSet(viewsets.ModelViewSet):
-    queryset = UserCafeRelation.objects.all()
     serializer_class = UserCafeRelationSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # ログインユーザーに関連するUserCafeRelationを返す
+        user = self.request.user
+        customuser = CustomUser.objects.get(username=user.username)
+        return UserCafeRelation.objects.filter(user=customuser)
 
 
 class UserRelationViewSet(viewsets.ModelViewSet):

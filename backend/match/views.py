@@ -327,7 +327,7 @@ def try_optimize(request):
     for day in range(num_days):
         list2 = []
         for user_index,user in enumerate(active_users):
-            relations = UserCafeRelation.objects.filter(user=user)
+            relations = UserCafeRelation.objects.filter(user=user).order_by('cafe__id')
             can_visit_list = [relation.can_visit for relation in relations]
 
             if freetime_list[user_index][day] == True:
@@ -551,4 +551,4 @@ def try_optimize(request):
     game_x = gf_true.astype(float, subok=False).round()
     val_x = x.astype(float, subok=False).round()
     outcome = m.objective_value
-    return HttpResponse(outcome)
+    return HttpResponse(val_x)

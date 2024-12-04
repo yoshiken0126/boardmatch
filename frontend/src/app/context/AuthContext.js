@@ -17,7 +17,6 @@ export function AuthProvider({ children }) {
 
   const checkAuth = async () => {
     const token = getToken();
-    console.log('取得したトークン:', token);
     if (token) {
       try {
         const response = await fetch('http://localhost:8000/accounts/token/verify/', {
@@ -29,7 +28,7 @@ export function AuthProvider({ children }) {
           },
           body:JSON.stringify({ token }),
         });
-        
+
         console.log('Authorization ヘッダー:', `Bearer ${token}`);
         console.log('Response status:', response.status);  // ステータスコードのログ
         const responseBody = await response.clone().text();  // レスポンスのテキストを取得してログに出力 
@@ -67,7 +66,21 @@ export function AuthProvider({ children }) {
       const data = await response.json();
       setToken(data.access);
       await checkAuth();
-      router.push('/boardgame');
+
+      // ユーザータイプに基づいて画面遷移
+      switch (data.user_type) {
+        case 'master_user':
+          router.push('/master-dashboard');
+          break;
+        case 'custom_user':
+          router.push('/boardgame');
+          break;
+        case 'staff_user':
+          router.push('/dashboard');
+          break;
+        default:
+          router.push('/login');
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;

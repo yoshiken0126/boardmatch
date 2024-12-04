@@ -24,6 +24,7 @@ from rest_framework.response import Response
 from rest_framework import permissions,viewsets
 from .filters import UserGameRelationFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from accounts.permissions import IsCustomUser
 
 
 # Create your views here.
@@ -38,7 +39,7 @@ class BoardGameCafeList(generics.ListCreateAPIView):
 
 class UserGameRelationViewSet(viewsets.ModelViewSet):
     serializer_class = UserGameRelationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsCustomUser]
     filter_backends = (DjangoFilterBackend,)  # フィルタリング用バックエンドを指定
     filterset_class = UserGameRelationFilter  # 使用するフィルタクラスを指定
 
@@ -73,7 +74,7 @@ class UserGameRelationViewSet(viewsets.ModelViewSet):
 class UserFreeTimeViewSet(viewsets.ModelViewSet):
     queryset = UserFreeTime.objects.all()
     serializer_class = UserFreeTimeSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsCustomUser]
 
     def get_queryset(self):
         # ログインしているユーザーに関連するUserFreeTimeだけを返す
@@ -97,7 +98,7 @@ class UserFreeTimeViewSet(viewsets.ModelViewSet):
 
 class UserCafeRelationViewSet(viewsets.ModelViewSet):
     serializer_class = UserCafeRelationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsCustomUser]
 
     def get_queryset(self):
         # ログインユーザーに関連するUserCafeRelationを返す
@@ -109,7 +110,7 @@ class UserCafeRelationViewSet(viewsets.ModelViewSet):
 class UserRelationViewSet(viewsets.ModelViewSet):
     queryset = UserRelation.objects.all()
     serializer_class = UserRelationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsCustomUser]
 
     def get_queryset(self):
         # ログイン中のユーザーに関連するUserGameRelationを返す
@@ -117,7 +118,7 @@ class UserRelationViewSet(viewsets.ModelViewSet):
         return UserRelation.objects.filter(from_user=user)
 
 class UserInfoViewSet(viewsets.GenericViewSet):
-    permission_classes = [permissions.IsAuthenticated]  # ログインユーザーのみアクセス可能
+    permission_classes = [IsCustomUser]  # ログインユーザーのみアクセス可能
     serializer_class = CustomUserSerializer
 
     def get_object(self):

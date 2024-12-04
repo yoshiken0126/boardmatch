@@ -11,13 +11,28 @@ from django.db.models.signals import post_save
 # Create your models here.
 
 class BaseUser(AbstractUser):
-    GENDER_CHOICES = [('male', '男性'), ('female', '女性')]
-    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
+    USER_TYPE_CHOICES = [
+        ('master_user', 'マスターユーザー'),
+        ('custom_user', 'カスタムユーザー'),
+        ('staff_user', 'カフェスタッフ')
+    ]
+    user_type = models.CharField(
+        max_length=20, 
+        choices=USER_TYPE_CHOICES, 
+        default=None,
+        null=True
+    )
 
 class CustomUser(BaseUser):
     is_optimize_active = models.BooleanField(default=False,verbose_name='最適化アクティブ')
     def __str__(self):
         return self.username
+
+    def save(self, *args, **kwargs):
+        # 新規作成時にuser_typeを自動設定
+        if not self.pk:  # 新規オブジェクトの場合
+            self.user_type = 'custom_user'
+        super().save(*args, **kwargs)
 
 class CafeStaff(BaseUser):
     cafe =models.ForeignKey('accounts.BoardGameCafe',on_delete=models.CASCADE)
@@ -25,6 +40,12 @@ class CafeStaff(BaseUser):
     class Meta:
         verbose_name = 'スタッフ'
         verbose_name_plural = 'スタッフ一覧'
+
+    def save(self, *args, **kwargs):
+        # 新規作成時にuser_typeを自動設定
+        if not self.pk:  # 新規オブジェクトの場合
+            self.user_type = 'staff_user'
+        super().save(*args, **kwargs)
 
 
 class BoardGameCafe(models.Model):

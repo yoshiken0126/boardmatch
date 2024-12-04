@@ -8,8 +8,10 @@ from django.contrib.auth.views import LoginView,LogoutView
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .serializers import CustomUserSerializer
+from .serializers import CustomUserSerializer,CustomTokenObtainPairSerializer
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
+from accounts.permissions import IsCustomUser
 
 
 class CustomUserSignup(APIView):
@@ -21,11 +23,14 @@ class CustomUserSignup(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)#エラー時のレスポンス
 
 class UserInfoView(APIView): #追記
-    permission_classes = [IsAuthenticated] #ログイン中のユーザーのみアクセス可能とする
+    permission_classes = [IsCustomUser] #ログイン中のユーザーのみアクセス可能とする
 
     def get(self, request):
         serializer = CustomUserSerializer(request.user) 
         return Response(serializer.data) #getメソッドでユーザーの情報を取得
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 

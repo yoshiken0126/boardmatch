@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import CustomUser,CafeStaff
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class CustomUserSerializer(serializers.ModelSerializer): #追記　Userのシリアライザー
     class Meta:
@@ -21,3 +22,12 @@ class CafeStaffSerializer(serializers.ModelSerializer): #salonのシリアライ
         #if obj.image:
             #return self.context['request'].build_absolute_uri(obj.image.url)
         #return None
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        # 基本的な認証を実行
+        data = super().validate(attrs)
+        
+        # ユーザータイプを追加
+        data['user_type'] = self.user.user_type
+        return data

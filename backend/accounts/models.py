@@ -50,6 +50,8 @@ class CafeStaff(BaseUser):
 
 class BoardGameCafe(models.Model):
     name = models.CharField(max_length=10)
+    capacity = models.PositiveIntegerField(default=0)
+    match_capacity = models.PositiveIntegerField(default=0)
     def __str__(self):
         return self.name
 

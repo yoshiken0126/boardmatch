@@ -6,3 +6,4 @@ numpy
 django-cors-headers
 djangorestframework-simplejwt
 django-filter
+Pillow

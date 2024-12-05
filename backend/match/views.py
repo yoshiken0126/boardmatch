@@ -375,6 +375,12 @@ def try_optimize(request):
                 else:
                     pass
 
+    for day in range(num_days):
+        for cafe in range(num_cafes):
+            m += xsum(x[day,:,cafe]) <= 4
+
+
+
 #game_followシステムを定義
     #user = request.user
     #customuser = CustomUser.objects.get(username=user.username)

@@ -7,6 +7,9 @@ from django.contrib.auth.models import AbstractUser
 from match.models import UserCafeRelation,  UserFreeTime
 from django.dispatch import receiver
 from django.db.models.signals import post_save
+from cafes.models import CafeTable
+
+
 
 # Create your models here.
 
@@ -50,8 +53,8 @@ class CafeStaff(BaseUser):
 
 class BoardGameCafe(models.Model):
     name = models.CharField(max_length=10)
-    capacity = models.PositiveIntegerField(default=0)
-    match_capacity = models.PositiveIntegerField(default=0)
+    opening_time = models.TimeField(default='13:00')  # 開店時間
+    closing_time = models.TimeField(default='23:00')  # 閉店時間
     def __str__(self):
         return self.name
 
@@ -84,3 +87,8 @@ def create_user_relations(sender, instance, created, **kwargs):
             monday_nighttime=False, tuesday_nighttime=False, wednesday_nighttime=False,
             thursday_nighttime=False, friday_nighttime=False, saturday_nighttime=False, sunday_nighttime=False
         )
+
+@receiver(post_save, sender=CafeTable)
+def create_timeslots_for_new_table(sender, instance, created, **kwargs):
+    if created:
+        instance.create_weekly_timeslots()

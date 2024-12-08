@@ -10,7 +10,7 @@ class StaffGameRelationAdmin(admin.ModelAdmin):
 
 
 
-from .models import CafeTable, TimeSlot, Reservation, Participant, ReservationTimeSlot
+from .models import CafeTable, TableTimeSlot, Reservation, Participant, ReservationTimeSlot
 
 # CafeTable 管理画面設定
 class CafeTableAdmin(admin.ModelAdmin):
@@ -19,9 +19,9 @@ class CafeTableAdmin(admin.ModelAdmin):
     list_filter = ('cafe',)  # カフェで絞り込み
 
 # TimeSlot 管理画面設定
-class TimeSlotAdmin(admin.ModelAdmin):
-    list_display = ('get_cafe_name','table', 'start_time', 'end_time', 'is_reserved')
-    list_filter = ('table__cafe__name', 'is_reserved')  # テーブルや予約状況でフィルタリング
+class TableTimeSlotAdmin(admin.ModelAdmin):
+    list_display = ('get_cafe_name','table', 'start_time', 'end_time', 'is_reserved','is_closed')
+    list_filter = ('table__cafe__name', 'is_reserved','is_closed')  # テーブルや予約状況でフィルタリング
     search_fields = ('table__table_name', 'start_time')  # テーブル名や開始時刻で検索可能
     def get_cafe_name(self, obj):
         return obj.table.cafe.name  # 'cafe' フィールドからカフェの名前を取得
@@ -63,7 +63,7 @@ class ReservationTimeSlotAdmin(admin.ModelAdmin):
 
 # モデルを管理画面に登録
 admin.site.register(CafeTable, CafeTableAdmin)
-admin.site.register(TimeSlot, TimeSlotAdmin)
+admin.site.register(TableTimeSlot, TableTimeSlotAdmin)
 admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(Participant, ParticipantAdmin)
 admin.site.register(ReservationTimeSlot, ReservationTimeSlotAdmin)

@@ -32,7 +32,7 @@ class CafeTable(models.Model):
     def __str__(self):
         return self.table_name
 
-    def create_weekly_timeslots(self):
+    def create_weekly_tabletimeslots(self):
     
         # カフェテーブルが作成された日時
         created_at = self.created_at if hasattr(self, 'created_at') else timezone.now()
@@ -55,7 +55,7 @@ class CafeTable(models.Model):
                 # 営業時間内に30分ごとにタイムスロットを作成
                 while current_time < end_time:
                         next_time = current_time + timedelta(minutes=30)
-                        TimeSlot.objects.create(
+                        TableTimeSlot.objects.create(
                         table=self,
                         start_time=current_time,
                         end_time=next_time
@@ -64,14 +64,17 @@ class CafeTable(models.Model):
                         current_time = next_time
 
 
-class TimeSlot(models.Model):
+
+
+class TableTimeSlot(models.Model):
     table = models.ForeignKey('cafes.CafeTable', on_delete=models.CASCADE, related_name='timeslot_relations')
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     is_reserved = models.BooleanField(default=False)
+    is_closed = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"TimeSlot {self.start_time} - {self.end_time} ({'Reserved' if self.is_reserved else 'Available'})"
+        return f"TableTimeSlot {self.start_time} - {self.end_time} ({'Reserved' if self.is_reserved else 'Available'})"
 
     class Meta:
         # 開始時刻順に並べる
@@ -81,9 +84,9 @@ class Reservation(models.Model):
     cafe = models.ForeignKey('accounts.BoardGameCafe', on_delete=models.CASCADE)  # どのカフェで予約か
     table = models.ForeignKey('cafes.CafeTable', on_delete=models.CASCADE)
     participant = models.ManyToManyField('accounts.CustomUser',through='Participant')
-    timeslot = models.ManyToManyField('cafes.TimeSlot',through='ReservationTimeSlot')
+    timeslot = models.ManyToManyField('cafes.TableTimeSlot',through='ReservationTimeSlot')
     reserved_at = models.DateTimeField(auto_now_add=True)
-    reservation_type = models.CharField(max_length=20, choices=[('matched', 'マッチング予約'), ('direct', '直接予約'), ('phone', '電話予約')], default='direct')
+    reservation_type = models.CharField(max_length=20, choices=[('match', 'マッチング予約'), ('user', 'アプリ予約'), ('staff', '店舗予約')], default='user')
 
 
 class Participant(models.Model):
@@ -93,7 +96,7 @@ class Participant(models.Model):
 
 class ReservationTimeSlot(models.Model):
     reservation = models.ForeignKey('cafes.Reservation', on_delete=models.CASCADE,related_name='timeslot_relations')
-    timeslot = models.ForeignKey('cafes.TimeSlot', on_delete=models.CASCADE,related_name='reservatin_relations')
+    timeslot = models.ForeignKey('cafes.TableTimeSlot', on_delete=models.CASCADE,related_name='reservatin_relations')
     
     class Meta:
         unique_together = ('reservation', 'timeslot')  # 同じ予約とタイムスロットの組み合わせを一意に

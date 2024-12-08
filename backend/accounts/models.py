@@ -55,8 +55,38 @@ class BoardGameCafe(models.Model):
     name = models.CharField(max_length=10)
     opening_time = models.TimeField(default='13:00')  # 開店時間
     closing_time = models.TimeField(default='23:00')  # 閉店時間
+
+    monday_open = models.TimeField(null=True, blank=True)  # 月曜日の開店時間
+    monday_close = models.TimeField(null=True, blank=True)  # 月曜日の閉店時間
+    
+    tuesday_open = models.TimeField(null=True, blank=True)  # 火曜日の開店時間
+    tuesday_close = models.TimeField(null=True, blank=True)  # 火曜日の閉店時間
+    
+    wednesday_open = models.TimeField(null=True, blank=True)  # 水曜日の開店時間
+    wednesday_close = models.TimeField(null=True, blank=True)  # 水曜日の閉店時間
+    
+    thursday_open = models.TimeField(null=True, blank=True)  # 木曜日の開店時間
+    thursday_close = models.TimeField(null=True, blank=True)  # 木曜日の閉店時間
+    
+    friday_open = models.TimeField(null=True, blank=True)  # 金曜日の開店時間
+    friday_close = models.TimeField(null=True, blank=True)  # 金曜日の閉店時間
+    
+    saturday_open = models.TimeField(null=True, blank=True)  # 土曜日の開店時間
+    saturday_close = models.TimeField(null=True, blank=True)  # 土曜日の閉店時間
+    
+    sunday_open = models.TimeField(null=True, blank=True)  # 日曜日の開店時間
+    sunday_close = models.TimeField(null=True, blank=True)  # 日曜日の閉店時間
+
     def __str__(self):
         return self.name
+
+    def get_opening_hours(self, day):
+        opening_field = getattr(self, f"{day}_open")
+        closing_field = getattr(self, f"{day}_close")
+        
+        if opening_field and closing_field:
+            return f"{opening_field} - {closing_field}"
+        return "Closed"
 
 class BoardGame(models.Model):
     name = models.CharField(max_length=15)

@@ -6,6 +6,7 @@ RUN yarn global add npm@latest
 RUN yarn global add create-next-app@14 
 RUN yarn global add axios
 RUN yarn global add shadcn
+RUN yarn global add date-fns
 
 #RUN yarn build
 CMD ["yarn", "run"]

@@ -32,7 +32,7 @@ class CafeTable(models.Model):
     def __str__(self):
         return self.table_name
 
-    def create_weekly_tabletimeslots(self):
+    def create_weekly_timeslots(self):
     
         # カフェテーブルが作成された日時
         created_at = self.created_at if hasattr(self, 'created_at') else timezone.now()

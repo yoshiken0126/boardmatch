@@ -7,6 +7,115 @@ from django.http import HttpResponse
 from mip import Model,maximize,xsum
 import numpy as np
 import datetime,random
+from .models import CafeTable
+from .serializers import CafeTableSerializer
+from accounts.permissions import IsStaffUser
+from rest_framework import viewsets
+
+
+
+class CafeTableViewSet(viewsets.ModelViewSet):
+    serializer_class = CafeTableSerializer
+    permission_classes = [IsStaffUser]
+
+    def get_queryset(self):
+        user = self.request.user
+        staff = CafeStaff.objects.get(username=user.username)
+
+        # ユーザーが CafeStaff モデルのインスタンスかどうかを確認
+        if isinstance(staff, CafeStaff):  # ユーザーが CafeStaff の場合
+            cafe = staff.cafe  # カフェ情報を取得
+            return CafeTable.objects.filter(cafe=cafe)  # カフェに関連するテーブルのみ返す
+
+        # ユーザーがスタッフでない場合、空のクエリセットを返す
+        return CafeTable.objects.none()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def otamesi(request):
     return HttpResponse('お試し')

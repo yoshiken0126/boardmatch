@@ -1,119 +1,145 @@
-import React from 'react';
-import { format, parseISO } from 'date-fns';
+"use client";
 
-// Sample reservation data (you would typically fetch this from an API)
-const initialReservations = [
-  { 
-    tableId: 1, 
-    startTime: '2024-02-15T15:00:00', 
-    endTime: '2024-02-15T16:30:00',
-    customerName: 'John Doe'
-  },
-  { 
-    tableId: 2, 
-    startTime: '2024-02-15T18:00:00', 
-    endTime: '2024-02-15T20:00:00',
-    customerName: 'Jane Smith'
-  }
+import React, { useState, useEffect } from 'react';
+import { format, addWeeks, startOfWeek, addDays, isSameDay } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const HOURS = Array.from({ length: 11 }, (_, i) => i + 13);
+
+// 予約バーのスタイルを計算する関数
+export function getReservationStyle(reservation) {
+  const startHour = parseInt(reservation.startTime.split(':')[0]);
+  const endHour = parseInt(reservation.endTime.split(':')[0]);
+  const startMinutes = parseInt(reservation.startTime.split(':')[1]);
+  const endMinutes = parseInt(reservation.endTime.split(':')[1]);
+
+  const start = (startHour - 13) * 60 + startMinutes;
+  const duration = (endHour - startHour) * 60 + (endMinutes - startMinutes);
+
+  return {
+    position: 'absolute',
+    left: `${(start / (10 * 60)) * 100}%`,
+    width: `${(duration / (10 * 60)) * 100}%`,
+    height: '80%',
+    top: '10%',
+    backgroundColor: 'hsl(var(--primary))',
+    borderRadius: '4px',
+    color: 'hsl(var(--primary-foreground))',
+    padding: '4px',
+    fontSize: '0.75rem',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
+  };
+}
+
+const tables = [
+  { id: 1, name: 'テーブル1' },
+  { id: 2, name: 'テーブル2' },
+  { id: 3, name: 'テーブル3' },
+  { id: 4, name: 'テーブル4' },
+  { id: 5, name: 'テーブル5' },
 ];
 
-export default function CafeReservationPage() {
-  // Generate time slots from 13:00 to 23:00
-  const timeSlots = Array.from({ length: 11 }, (_, i) => 13 + i);
-  
-  // Number of tables (you can adjust this)
-  const tables = Array.from({ length: 5 }, (_, i) => i + 1);
+const mockReservations = [
+  { id: '1', tableId: 1, startTime: '14:00', endTime: '16:00', customerName: '山田太郎', date: '2024-12-09' },
+  { id: '2', tableId: 3, startTime: '18:30', endTime: '20:00', customerName: '佐藤花子', date: '2024-12-10' },
+  { id: '3', tableId: 2, startTime: '13:30', endTime: '15:30', customerName: '鈴木一郎', date: '2024-12-11' },
+];
 
-  // Calculate position and width of reservation bars
-  const calculateReservationStyle = (startTime, endTime) => {
-    const start = parseISO(startTime);
-    const end = parseISO(endTime);
-    
-    // Calculate start position (percentage from 13:00)
-    const startHour = start.getHours();
-    const startMinute = start.getMinutes();
-    const startPosition = ((startHour - 13 + startMinute / 60) / 10) * 100;
-    
-    // Calculate width (percentage of time duration)
-    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    const width = (durationHours / 10) * 100;
+export default function CafeReservation() {
+  const [selectedWeek, setSelectedWeek] = useState(0);
+  const currentDate = new Date();
 
-    return {
-      position: 'absolute',
-      left: `${startPosition}%`,
-      width: `${width}%`,
-      height: '80%',
-      backgroundColor: 'rgba(0, 123, 255, 0.7)',
-      borderRadius: '4px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: 'white',
-      fontWeight: 'bold',
-      fontSize: '0.8rem',
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    };
-  };
+  const weeks = Array.from({ length: 5 }, (_, i) => {
+    const weekStart = startOfWeek(addWeeks(currentDate, i), { weekStartsOn: 1 });
+    return Array.from({ length: 7 }, (_, j) => addDays(weekStart, j));
+  });
+
+  useEffect(() => {
+    // mockReservationsの変更に伴い、必要であればログを表示（今回は削除しました）
+  }, [mockReservations]);
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4">
+    <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">カフェ予約管理</h1>
-      
-      {/* Time Header */}
-      <div className="flex mb-2">
-        <div className="w-20 mr-4"></div>
-        <div className="flex-grow relative h-10">
-          {timeSlots.map((hour) => (
-            <div 
-              key={hour} 
-              className="absolute text-sm text-gray-600"
-              style={{ 
-                left: `${((hour - 13) / 10) * 100}%`,
-                transform: 'translateX(-50%)'
-              }}
-            >
-              {hour}:00
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Tables and Reservations */}
-      {tables.map((tableId) => (
-        <div 
-          key={tableId} 
-          className="flex items-center border-b py-2"
-        >
-          {/* Table Label */}
-          <div className="w-20 mr-4 font-medium">
-            テーブル {tableId}
-          </div>
-
-          {/* Timeline */}
-          <div 
-            className="flex-grow relative h-12 bg-gray-100 rounded"
-            style={{ position: 'relative' }}
-          >
-            {/* Reservation Bars */}
-            {initialReservations
-              .filter(res => res.tableId === tableId)
-              .map((reservation, index) => (
-                <div 
-                  key={index}
-                  style={calculateReservationStyle(
-                    reservation.startTime, 
-                    reservation.endTime
-                  )}
-                >
-                  {reservation.customerName}
+      <Tabs defaultValue="0" onValueChange={(value) => setSelectedWeek(parseInt(value))}>
+        <TabsList className="grid w-full grid-cols-5">
+          {weeks.map((week, index) => (
+            <TabsTrigger key={index} value={index.toString()}>
+              <div className="text-center">
+                <div className="text-sm font-medium">
+                  {format(week[0], 'M/d', { locale: ja })} - {format(week[6], 'M/d', { locale: ja })}
                 </div>
-              ))
-            }
-          </div>
-        </div>
-      ))}
+                <div className="text-xs">
+                  {index === 0 ? '今週' : `${index + 1}週間後`}
+                </div>
+              </div>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {weeks.map((week, weekIndex) => (
+          <TabsContent key={weekIndex} value={weekIndex.toString()}>
+            {week.map((day) => (
+              <Card key={day.toISOString()} className="mb-4">
+                <CardHeader>
+                  <CardTitle>{format(day, 'yyyy年M月d日 (EEEE)', { locale: ja })}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-[auto,1fr] gap-4 overflow-x-auto">
+                    <div></div>
+                    <div className="grid grid-cols-11 gap-0 border-b border-gray-200">
+                      {HOURS.map((hour) => (
+                        <div key={hour} className="text-center text-sm font-medium py-2">
+                          {hour}:00
+                        </div>
+                      ))}
+                    </div>
+
+                    {tables.map((table) => (
+                      <React.Fragment key={table.id}>
+                        <div className="flex items-center justify-end pr-4 font-medium">{table.name}</div>
+                        <div className="grid grid-cols-11 gap-0 border-b border-gray-200 relative">
+                          {HOURS.map((hour) => (
+                            <div key={hour} className="h-16 border-r border-gray-200"></div>
+                          ))}
+
+                          {mockReservations
+                            .filter((res) => {
+                              const reservationDate = new Date(res.date);
+                              const dayDate = new Date(day);
+
+                              // 予約と日付が一致し、テーブルが一致する場合のみ
+                              if (isSameDay(reservationDate, dayDate) && res.tableId === table.id) {
+                                // ログを条件が一致した場合のみ表示
+                                console.log(`Rendering reservation for table: ${table.name}, Customer: ${res.customerName}`);
+                                return true;
+                              }
+
+                              return false;
+                            })
+                            .map((reservation) => (
+                              <div
+                                key={reservation.id}
+                                style={getReservationStyle(reservation)}
+                                title={`${reservation.customerName} (${reservation.startTime}-${reservation.endTime})`}
+                              >
+                                {reservation.customerName}
+                              </div>
+                            ))}
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 }

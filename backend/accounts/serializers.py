@@ -12,10 +12,12 @@ class CustomUserSerializer(serializers.ModelSerializer): #追記　Userのシリ
         user = CustomUser.objects.create_user(**validated_data)
         return user
 
-class CafeStaffSerializer(serializers.ModelSerializer): #salonのシリアライザー
+class StaffUserSerializer(serializers.ModelSerializer): #salonのシリアライザー
+    cafe_name = serializers.CharField(source='cafe.name', read_only=True)
+
     class Meta:
         model = CafeStaff
-        fields = ['id', 'name', 'address', 'description','phone_number','email','image','created_at','updated_at']
+        fields = ['id', 'username', 'password', 'cafe','cafe_name']
         extra_kwargs = {'password':{'write_only': True}} #パスワードフィールドを書き込み専用にする
 
     #def get_image(self, obj):

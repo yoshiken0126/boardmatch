@@ -1,11 +1,12 @@
 from django.urls import path,include
 from . import views
 from rest_framework.routers import DefaultRouter
-from .views import CafeTableViewSet
+from .views import CafeTableViewSet,StaffInfoViewSet
 
 
 router = DefaultRouter()
 router.register(r'tables', CafeTableViewSet, basename='cafetable')
+router.register(r'staff_info', StaffInfoViewSet, basename='staff_info')
 
 
 app_name = 'cafes'

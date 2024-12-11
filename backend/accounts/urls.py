@@ -1,7 +1,7 @@
 from accounts.views import SignUpView,CafeSignUpView
 from django.urls import path
 from . import views
-from .views import CustomLoginView,CustomLogoutView,BoardGameCafeCreateView,BoardGameCreateView,CustomUserSignup,UserInfoView,CustomTokenObtainPairView
+from .views import CustomLoginView,CustomLogoutView,BoardGameCafeCreateView,BoardGameCreateView,CustomUserSignup,UserInfoView,StaffInfoView,CustomTokenObtainPairView
 from rest_framework_simplejwt.views import  TokenRefreshView,TokenVerifyView,TokenObtainPairView
 
 app_name = 'accounts'
@@ -18,4 +18,5 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),#ここではリフレッシュトークンを利用してアクセストークンを発行します。
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('user-info/', UserInfoView.as_view(), name='user-info'),
+    path('staff_info/', StaffInfoView.as_view(), name='staff_info')
 ]

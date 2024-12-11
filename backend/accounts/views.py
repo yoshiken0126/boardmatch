@@ -8,10 +8,10 @@ from django.contrib.auth.views import LoginView,LogoutView
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .serializers import CustomUserSerializer,CustomTokenObtainPairSerializer
+from .serializers import CustomUserSerializer,CustomTokenObtainPairSerializer,StaffUserSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
-from accounts.permissions import IsCustomUser
+from accounts.permissions import IsCustomUser,IsStaffUser
 
 
 class CustomUserSignup(APIView):
@@ -28,6 +28,15 @@ class UserInfoView(APIView): #追記
     def get(self, request):
         serializer = CustomUserSerializer(request.user) 
         return Response(serializer.data) #getメソッドでユーザーの情報を取得
+
+
+class StaffInfoView(APIView): #追記
+    permission_classes = [IsStaffUser] #ログイン中のユーザーのみアクセス可能とする
+
+    def get(self, request):
+        serializer = StaffUserSerializer(request.user) 
+        return Response(serializer.data) #getメソッドでユーザーの情報を取得
+
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer

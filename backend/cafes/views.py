@@ -9,8 +9,10 @@ import numpy as np
 import datetime,random
 from .models import CafeTable
 from .serializers import CafeTableSerializer
+from accounts.serializers import StaffUserSerializer
 from accounts.permissions import IsStaffUser
 from rest_framework import viewsets
+from rest_framework.response import Response
 
 
 
@@ -29,6 +31,22 @@ class CafeTableViewSet(viewsets.ModelViewSet):
 
         # ユーザーがスタッフでない場合、空のクエリセットを返す
         return CafeTable.objects.none()
+
+
+class StaffInfoViewSet(viewsets.GenericViewSet):
+    permission_classes = [IsStaffUser]  # ログインユーザーのみアクセス可能
+    serializer_class = StaffUserSerializer
+
+    def get_object(self):
+        # ログインユーザーの情報を取得
+        return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        # ログインユーザーの情報を取得してシリアライズして返す
+        user = self.get_object()
+        staffuser = CafeStaff.objects.get(username=user.username)
+        serializer = self.get_serializer(staffuser)
+        return Response(serializer.data)
 
 
 

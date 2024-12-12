@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.contrib.postgres.fields import DateTimeRangeField
 from django.utils import timezone
 from datetime import timedelta, datetime
 
@@ -33,7 +33,6 @@ class CafeTable(models.Model):
         return self.table_name
 
     def create_weekly_timeslots(self):
-    
         # カフェテーブルが作成された日時
         created_at = self.created_at if hasattr(self, 'created_at') else timezone.now()
 
@@ -46,40 +45,43 @@ class CafeTable(models.Model):
 
         # 1週間ごとのタイムスロットを4週間分作成
         for week_offset in range(4):  # 4週間分
-            # 各曜日（月曜日から日曜日）のタイムスロットを作成
+        # 各曜日（月曜日から日曜日）のタイムスロットを作成
             for day_offset in range(7):  # 月曜日から日曜日
                 day_start = start_of_week + timedelta(weeks=week_offset, days=day_offset)  # 各曜日の日付
                 current_time = timezone.make_aware(datetime.combine(day_start, opening_time))
                 end_time = timezone.make_aware(datetime.combine(day_start, closing_time))
 
-                # 営業時間内に30分ごとにタイムスロットを作成
+            # 営業時間内に30分ごとにタイムスロットを作成
                 while current_time < end_time:
-                        next_time = current_time + timedelta(minutes=30)
-                        TableTimeSlot.objects.create(
+                    next_time = current_time + timedelta(minutes=30)
+                
+                    # timeslot_range を作成して保存
+                    timeslot_range = (current_time, next_time)
+                
+                # 新しいタイムスロットを作成
+                    TableTimeSlot.objects.create(
                         table=self,
-                        start_time=current_time,
-                        end_time=next_time
-                        )
-                        # 30分進める
-                        current_time = next_time
+                        timeslot_range=timeslot_range,  # DateTimeRangeFieldを使用
+                    )
+                
+                # 30分進める
+                    current_time = next_time
 
 
 
 
 class TableTimeSlot(models.Model):
     table = models.ForeignKey('cafes.CafeTable', on_delete=models.CASCADE, related_name='timeslot_relations')
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    timeslot_range = DateTimeRangeField(null=True)  # start_time と end_time を範囲型で表現
     is_reserved = models.BooleanField(default=False)
     is_closed = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"TableTimeSlot {self.start_time} - {self.end_time} ({'Reserved' if self.is_reserved else 'Available'})"
+        return f"TableTimeSlot {self.timeslot_range.lower} - {self.timeslot_range.upper} ({'Reserved' if self.is_reserved else 'Available'})"
 
     class Meta:
-        # 開始時刻順に並べる
-        ordering = ['start_time']
-
+        # 開始時刻（範囲の開始時刻）順に並べる
+        ordering = ['timeslot_range']
 class Reservation(models.Model):
     cafe = models.ForeignKey('accounts.BoardGameCafe', on_delete=models.CASCADE)  # どのカフェで予約か
     table = models.ForeignKey('cafes.CafeTable', on_delete=models.CASCADE)

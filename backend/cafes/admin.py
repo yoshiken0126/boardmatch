@@ -18,15 +18,24 @@ class CafeTableAdmin(admin.ModelAdmin):
     search_fields = ('table_name', 'cafe__name')  # カフェ名で検索可能
     list_filter = ('cafe',)  # カフェで絞り込み
 
-# TimeSlot 管理画面設定
 class TableTimeSlotAdmin(admin.ModelAdmin):
-    list_display = ('get_cafe_name','table', 'start_time', 'end_time', 'is_reserved','is_closed')
-    list_filter = ('table__cafe__name', 'is_reserved','is_closed')  # テーブルや予約状況でフィルタリング
-    search_fields = ('table__table_name', 'start_time')  # テーブル名や開始時刻で検索可能
+    list_display = ('get_cafe_name', 'table', 'get_start_time', 'get_end_time', 'is_reserved', 'is_closed')
+    list_filter = ('table__cafe__name', 'is_reserved', 'is_closed')  # テーブルや予約状況でフィルタリング
+    search_fields = ('table__table_name', 'timeslot_range')  # テーブル名や予約時間帯で検索可能
+    
     def get_cafe_name(self, obj):
         return obj.table.cafe.name  # 'cafe' フィールドからカフェの名前を取得
     get_cafe_name.short_description = 'Cafe Name'  # カラム名を「Cafe Name」と表示
+    
+    # 時間帯（開始時刻）を表示するメソッド
+    def get_start_time(self, obj):
+        return obj.timeslot_range.lower.strftime('%Y-%m-%d %H:%M:%S')  # 開始時刻
+    get_start_time.short_description = 'Start Time'
 
+    # 時間帯（終了時刻）を表示するメソッド
+    def get_end_time(self, obj):
+        return obj.timeslot_range.upper.strftime('%Y-%m-%d %H:%M:%S')  # 終了時刻
+    get_end_time.short_description = 'End Time'
 # Reservation 管理画面設定
 class ReservationAdmin(admin.ModelAdmin):
     list_display = ('cafe', 'table', 'reserved_at', 'reservation_type', 'get_participants', 'get_timeslots')

@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { format, addWeeks, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+// Import the getToken function (assuming it's defined in a separate file)
+import { getToken } from '@/lib/auth';
 
 export const HOURS = Array.from({ length: 11 }, (_, i) => i + 13);
 
@@ -35,14 +39,6 @@ export function getReservationStyle(reservation) {
   };
 }
 
-const tables = [
-  { id: 1, name: 'テーブル1' },
-  { id: 2, name: 'テーブル2' },
-  { id: 3, name: 'テーブル3' },
-  { id: 4, name: 'テーブル4' },
-  { id: 5, name: 'テーブル5' },
-];
-
 const mockReservations = [
   { id: '1', tableId: 1, startTime: '14:00', endTime: '16:00', customerName: '山田太郎', date: '2024-12-09' },
   { id: '2', tableId: 3, startTime: '18:30', endTime: '20:00', customerName: '佐藤花子', date: '2024-12-10' },
@@ -51,6 +47,8 @@ const mockReservations = [
 
 export default function CafeReservation() {
   const [selectedWeek, setSelectedWeek] = useState(0);
+  const [tables, setTables] = useState([]);
+  const [error, setError] = useState(null);
   const currentDate = new Date();
 
   const weeks = Array.from({ length: 5 }, (_, i) => {
@@ -59,8 +57,30 @@ export default function CafeReservation() {
   });
 
   useEffect(() => {
-    // mockReservationsの変更に伴い、必要であればログを表示（今回は削除しました）
-  }, [mockReservations]);
+    const fetchTables = async () => {
+      try {
+        const token = getToken(); // Get the token
+        const response = await axios.get('http://localhost:8000/cafes/api/tables/', {
+          headers: {
+            Authorization: `Bearer ${token}`, // Include the token in the request headers
+          },
+        });
+        setTables(response.data.map(table => ({
+          id: table.id,
+          name: table.table_name
+        })));
+      } catch (err) {
+        console.error('Error fetching tables:', err);
+        setError('テーブル情報の取得に失敗しました。');
+      }
+    };
+
+    fetchTables();
+  }, []);
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -112,9 +132,7 @@ export default function CafeReservation() {
                               const reservationDate = new Date(res.date);
                               const dayDate = new Date(day);
 
-                              // 予約と日付が一致し、テーブルが一致する場合のみ
                               if (isSameDay(reservationDate, dayDate) && res.tableId === table.id) {
-                                // ログを条件が一致した場合のみ表示
                                 console.log(`Rendering reservation for table: ${table.name}, Customer: ${res.customerName}`);
                                 return true;
                               }
@@ -143,3 +161,4 @@ export default function CafeReservation() {
     </div>
   );
 }
+

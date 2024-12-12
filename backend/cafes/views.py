@@ -18,20 +18,21 @@ from rest_framework.response import Response
 
 class CafeTableViewSet(viewsets.ModelViewSet):
     serializer_class = CafeTableSerializer
-    permission_classes = [IsStaffUser]
+    
+    def get_object(self):
+        # ログインユーザーの情報を取得
+        return self.request.user
 
     def get_queryset(self):
-        user = self.request.user
+        user = self.get_object()
+        print(f"{user}です。")
         staff = CafeStaff.objects.get(username=user.username)
+        cafe = staff.cafe
+        print(cafe)
 
-        # ユーザーが CafeStaff モデルのインスタンスかどうかを確認
-        if isinstance(staff, CafeStaff):  # ユーザーが CafeStaff の場合
-            cafe = staff.cafe  # カフェ情報を取得
-            return CafeTable.objects.filter(cafe=cafe)  # カフェに関連するテーブルのみ返す
+        return CafeTable.objects.filter(cafe=cafe)  # カフェに関連するテーブルのみ返す
 
-        # ユーザーがスタッフでない場合、空のクエリセットを返す
-        return CafeTable.objects.none()
-
+       
 
 class StaffInfoViewSet(viewsets.GenericViewSet):
     permission_classes = [IsStaffUser]  # ログインユーザーのみアクセス可能

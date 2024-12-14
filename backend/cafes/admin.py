@@ -1,6 +1,6 @@
 from cafes.models import CafeGameRelation, StaffGameRelation
 from django.contrib import admin
-
+from django.utils import timezone
 
 class CafeGameRelationAdmin(admin.ModelAdmin):
     list_display = ('cafe','game','can_instruct','is_recommended')
@@ -18,24 +18,29 @@ class CafeTableAdmin(admin.ModelAdmin):
     search_fields = ('table_name', 'cafe__name')  # カフェ名で検索可能
     list_filter = ('cafe',)  # カフェで絞り込み
 
+
+
 class TableTimeSlotAdmin(admin.ModelAdmin):
     list_display = ('get_cafe_name', 'table', 'get_start_time', 'get_end_time', 'is_reserved', 'is_closed')
     list_filter = ('table__cafe__name', 'is_reserved', 'is_closed')  # テーブルや予約状況でフィルタリング
     search_fields = ('table__table_name', 'timeslot_range')  # テーブル名や予約時間帯で検索可能
-    
+
     def get_cafe_name(self, obj):
         return obj.table.cafe.name  # 'cafe' フィールドからカフェの名前を取得
     get_cafe_name.short_description = 'Cafe Name'  # カラム名を「Cafe Name」と表示
-    
+
     # 時間帯（開始時刻）を表示するメソッド
     def get_start_time(self, obj):
-        return obj.timeslot_range.lower.strftime('%Y-%m-%d %H:%M:%S')  # 開始時刻
+        start_time = timezone.localtime(obj.timeslot_range.lower)  # タイムゾーンを適用
+        return start_time.strftime('%Y-%m-%d %H:%M:%S')  # 開始時刻
     get_start_time.short_description = 'Start Time'
 
     # 時間帯（終了時刻）を表示するメソッド
     def get_end_time(self, obj):
-        return obj.timeslot_range.upper.strftime('%Y-%m-%d %H:%M:%S')  # 終了時刻
+        end_time = timezone.localtime(obj.timeslot_range.upper)  # タイムゾーンを適用
+        return end_time.strftime('%Y-%m-%d %H:%M:%S')  # 終了時刻
     get_end_time.short_description = 'End Time'
+
 # Reservation 管理画面設定
 class ReservationAdmin(admin.ModelAdmin):
     list_display = ('cafe', 'table', 'reserved_at', 'reservation_type', 'get_participants', 'get_timeslots')
@@ -54,8 +59,10 @@ class ReservationAdmin(admin.ModelAdmin):
     def get_timeslots(self, obj):
         # タイムスロットリストを改行で区切って表示
         timeslots = obj.timeslot.all()
-        return "\n".join([str(timeslot.start_time) for timeslot in timeslots])
+        # timeslot.timeslot_range.lower を使って開始時刻を表示
+        return "\n".join([str(timezone.localtime(timeslot.timeslot_range.lower).strftime('%Y-%m-%d %H:%M:%S')) for timeslot in timeslots])
     get_timeslots.short_description = 'Time Slots'  # カラム名を指定
+
 
 
 # Participant 管理画面設定
@@ -66,9 +73,16 @@ class ParticipantAdmin(admin.ModelAdmin):
 
 # ReservationTimeSlot 管理画面設定
 class ReservationTimeSlotAdmin(admin.ModelAdmin):
-    list_display = ('reservation', 'timeslot')
-    search_fields = ('reservation__cafe__name', 'timeslot__start_time')  # 予約のカフェ名やタイムスロットで検索可能
+    list_display = ('reservation', 'get_timeslot_start_time')  # timeslotの開始時刻を表示
+    search_fields = ('reservation__cafe__name', 'get_timeslot_start_time')  # カフェ名と開始時刻で検索
     list_filter = ('reservation__cafe',)  # 予約したカフェでフィルタリング
+
+    # timeslotの開始時刻を表示するカスタムメソッド
+    def get_timeslot_start_time(self, obj):
+        # timeslot.timeslot_range.lower を使って開始時刻を表示
+        start_time = timezone.localtime(obj.timeslot.timeslot_range.lower)  # タイムゾーンを適用
+        return start_time.strftime('%Y-%m-%d %H:%M:%S')  # 開始時刻
+    get_timeslot_start_time.short_description = 'Start Time'  # カラム名を指定
 
 # モデルを管理画面に登録
 admin.site.register(CafeTable, CafeTableAdmin)

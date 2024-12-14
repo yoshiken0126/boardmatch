@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { format, addWeeks, startOfWeek, addDays, isSameDay } from 'date-fns';
+import { format, addWeeks, startOfWeek, addDays, isSameDay, isWithinInterval, set, parseISO } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // Import the getToken function (assuming it's defined in a separate file)
 import { getToken } from '@/lib/auth';
 
-export const HOURS = Array.from({ length: 11 }, (_, i) => i + 13);
+export const HOURS = Array.from({ length: 10 }, (_, i) => i + 13);
 
 // 予約バーのスタイルを計算する関数
 export function getReservationStyle(reservation) {
@@ -24,8 +24,8 @@ export function getReservationStyle(reservation) {
 
   return {
     position: 'absolute',
-    left: `${(start / (10 * 60)) * 100}%`,
-    width: `${(duration / (10 * 60)) * 100}%`,
+    left: `${(start / (9 * 60)) * 100}%`,
+    width: `${(duration / (9 * 60)) * 100}%`,
     height: '80%',
     top: '10%',
     backgroundColor: 'hsl(var(--primary))',
@@ -49,6 +49,7 @@ export default function CafeReservation() {
   const [selectedWeek, setSelectedWeek] = useState(0);
   const [tables, setTables] = useState([]);
   const [error, setError] = useState(null);
+  const [cafeData, setCafeData] = useState(null);
   const currentDate = new Date();
 
   const weeks = Array.from({ length: 5 }, (_, i) => {
@@ -77,6 +78,73 @@ export default function CafeReservation() {
 
     fetchTables();
   }, []);
+
+  useEffect(() => {
+    const fetchBoardGameCafe = async () => {
+      try {
+        const token = getToken(); // Get the token
+        const response = await fetch('http://localhost:8000/cafes/api/boardgamecafes/', {
+          headers: {
+            Authorization: `Bearer ${token}`, // Include the token in the request headers
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch board game cafe data');
+        }
+        const data = await response.json();
+        console.log('Board Game Cafe Data:', data); // Log the fetched data to the console
+        setCafeData(data[0]);
+      } catch (err) {
+        console.error('Error fetching board game cafe data:', err);
+        setCafeData(null); // Explicitly set to null if fetch fails
+      }
+    };
+
+    fetchBoardGameCafe();
+  }, []);
+
+  const isWithinBusinessHours = (day, hour) => {
+    // cafeDataがnullまたは未定義の場合は休業
+    if (!cafeData) return false;
+
+    const dayOfWeek = format(day, 'EEEE').toLowerCase();
+    const openTimeKey = `${dayOfWeek}_open`;
+    const closeTimeKey = `${dayOfWeek}_close`;
+
+    // 特定の曜日の開店・閉店時間がnullの場合は休業日
+    const openTime = cafeData[openTimeKey];
+    const closeTime = cafeData[closeTimeKey];
+
+    // 開店時間または閉店時間がnullの場合は休業
+    if (openTime === null || closeTime === null) return false;
+
+    // 開店時間または閉店時間が未定義の場合も休業
+    if (!openTime || !closeTime) return false;
+
+    // 開店時間と閉店時間の解析
+    const currentTime = set(day, { hours: hour, minutes: 0, seconds: 0 });
+    const openDateTime = set(day, {
+      hours: parseInt(openTime.split(':')[0]),
+      minutes: parseInt(openTime.split(':')[1]),
+      seconds: 0
+    });
+    const closeDateTime = set(day, {
+      hours: parseInt(closeTime.split(':')[0]),
+      minutes: parseInt(closeTime.split(':')[1]),
+      seconds: 0
+    });
+
+    // 閉店時間が開店時間より前の場合（深夜営業）の処理
+    if (closeDateTime < openDateTime) {
+      if (hour < parseInt(openDateTime.getHours())) {
+        return false;
+      }
+      closeDateTime.setDate(closeDateTime.getDate() + 1);
+    }
+
+    // 営業時間内かどうかを判定
+    return currentTime >= openDateTime && currentTime < closeDateTime;
+  };
 
   if (error) {
     return <div className="text-red-500">{error}</div>;
@@ -111,7 +179,7 @@ export default function CafeReservation() {
                 <CardContent>
                   <div className="grid grid-cols-[auto,1fr] gap-4 overflow-x-auto">
                     <div></div>
-                    <div className="grid grid-cols-11 gap-0 border-b border-gray-200">
+                    <div className="grid grid-cols-10 gap-0 border-b border-gray-200">
                       {HOURS.map((hour) => (
                         <div key={hour} className="text-center text-sm font-medium py-2">
                           {hour}:00
@@ -122,9 +190,14 @@ export default function CafeReservation() {
                     {tables.map((table) => (
                       <React.Fragment key={table.id}>
                         <div className="flex items-center justify-end pr-4 font-medium">{table.name}</div>
-                        <div className="grid grid-cols-11 gap-0 border-b border-gray-200 relative">
+                        <div className="grid grid-cols-10 gap-0 border-b border-gray-200 relative">
                           {HOURS.map((hour) => (
-                            <div key={hour} className="h-16 border-r border-gray-200"></div>
+                            <div 
+                              key={hour} 
+                              className={`h-16 border-r border-gray-200 ${
+                                !isWithinBusinessHours(day, hour) ? 'bg-gray-200' : ''
+                              }`}
+                            ></div>
                           ))}
 
                           {mockReservations
@@ -161,4 +234,3 @@ export default function CafeReservation() {
     </div>
   );
 }
-

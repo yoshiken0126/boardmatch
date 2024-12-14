@@ -8,7 +8,7 @@ from mip import Model,maximize,xsum
 import numpy as np
 import datetime,random
 from .models import CafeTable
-from .serializers import CafeTableSerializer
+from .serializers import CafeTableSerializer,BoardGameCafeSerializer
 from accounts.serializers import StaffUserSerializer
 from accounts.permissions import IsStaffUser
 from rest_framework import viewsets
@@ -49,6 +49,61 @@ class StaffInfoViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(staffuser)
         return Response(serializer.data)
 
+class BoardGameCafeViewSet(viewsets.ModelViewSet):
+    serializer_class = BoardGameCafeSerializer  # 使用するシリアライザを指定
+
+    def get_queryset(self):
+        """
+        ログインユーザーが管理するカフェの情報を取得する。
+        """
+        user = self.request.user
+        staffuser = CafeStaff.objects.get(username=user.username)
+        cafe = staffuser.cafe
+        return BoardGameCafe.objects.filter(id=cafe.id)  # スタッフが管理するカフェのみ返す
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        ログインユーザーに関連するカフェの詳細情報を返す。
+        """
+        user = self.request.user
+        staffuser = CafeStaff.objects.get(username=user.username)
+        cafe = staffuser.cafe
+
+        # cafe情報をシリアライズして返す
+        serializer = self.get_serializer(cafe)
+        return Response(serializer.data)
+
+
+#お試しで作成。ダメなら全消去
+
+from rest_framework import viewsets
+from .models import Reservation
+from .serializers import ReservationSerializer
+from rest_framework.response import Response
+from rest_framework.decorators import action
+
+class ReservationViewSet(viewsets.ModelViewSet):
+    queryset = Reservation.objects.all()  # 予約の全てを取得
+    serializer_class = ReservationSerializer
+
+    # 特定の日付に基づいた予約情報を取得するカスタムアクション
+    @action(detail=False, methods=['get'], url_path='by-date')
+    def get_reservations_by_date(self, request):
+        # クエリパラメータから日付を取得
+        date = request.query_params.get('date')
+        if date:
+            # 日付に基づいて予約をフィルタリング
+            reservations = Reservation.objects.filter(reserved_at__date=date)
+            serializer = self.get_serializer(reservations, many=True)
+            return Response(serializer.data)
+        return Response({'detail': 'Date parameter is required'}, status=400)
+
+    # 予約の詳細を取得する
+    def retrieve(self, request, *args, **kwargs):
+        # 予約IDに基づいて詳細情報を取得
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 
 

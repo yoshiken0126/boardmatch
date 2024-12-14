@@ -77,11 +77,23 @@ class TableTimeSlot(models.Model):
     is_closed = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"TableTimeSlot {self.timeslot_range.lower} - {self.timeslot_range.upper} ({'Reserved' if self.is_reserved else 'Available'})"
-
+        # タイムゾーンをローカルタイム（例: Asia/Tokyo）に変換
+        start_time = timezone.localtime(self.timeslot_range.lower) if self.timeslot_range.lower else None
+        end_time = timezone.localtime(self.timeslot_range.upper) if self.timeslot_range.upper else None
+        
+        # ローカルタイムでフォーマットした開始時刻と終了時刻を表示
+        start_time_str = start_time.strftime('%Y-%m-%d %H:%M:%S') if start_time else 'N/A'
+        end_time_str = end_time.strftime('%Y-%m-%d %H:%M:%S') if end_time else 'N/A'
+        
+        # テーブルIDを取得
+        table_id = self.table.id if self.table else 'Unknown Table ID'
+        
+        return f"TableTimeSlot for Table ID {table_id} - {start_time_str} to {end_time_str} ({'Reserved' if self.is_reserved else 'Available'})"
+        
     class Meta:
         # 開始時刻（範囲の開始時刻）順に並べる
         ordering = ['timeslot_range']
+
 class Reservation(models.Model):
     cafe = models.ForeignKey('accounts.BoardGameCafe', on_delete=models.CASCADE)  # どのカフェで予約か
     table = models.ForeignKey('cafes.CafeTable', on_delete=models.CASCADE)

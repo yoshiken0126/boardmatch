@@ -77,35 +77,19 @@ class BoardGameCafeViewSet(viewsets.ModelViewSet):
 #お試しで作成。ダメなら全消去
 
 from rest_framework import viewsets
-from .models import Reservation
-from .serializers import ReservationSerializer
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from cafes.models import Reservation
+from .serializers import ReservationSerializer
 
 class ReservationViewSet(viewsets.ModelViewSet):
-    queryset = Reservation.objects.all()  # 予約の全てを取得
+    queryset = Reservation.objects.all()
     serializer_class = ReservationSerializer
 
-    # 特定の日付に基づいた予約情報を取得するカスタムアクション
-    @action(detail=False, methods=['get'], url_path='by-date')
-    def get_reservations_by_date(self, request):
-        # クエリパラメータから日付を取得
-        date = request.query_params.get('date')
-        if date:
-            # 日付に基づいて予約をフィルタリング
-            reservations = Reservation.objects.filter(reserved_at__date=date)
-            serializer = self.get_serializer(reservations, many=True)
-            return Response(serializer.data)
-        return Response({'detail': 'Date parameter is required'}, status=400)
-
-    # 予約の詳細を取得する
-    def retrieve(self, request, *args, **kwargs):
-        # 予約IDに基づいて詳細情報を取得
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
+    # 追加のカスタマイズが必要な場合、ここでオーバーライド
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-
-
 
 
 

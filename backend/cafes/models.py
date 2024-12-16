@@ -53,7 +53,7 @@ class CafeTable(models.Model):
 
             # 営業時間内に30分ごとにタイムスロットを作成
                 while current_time < end_time:
-                    next_time = current_time + timedelta(minutes=30)
+                    next_time = current_time + timedelta(minutes=60)
                 
                     # timeslot_range を作成して保存
                     timeslot_range = (current_time, next_time)

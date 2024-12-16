@@ -23,37 +23,29 @@ from rest_framework import serializers
 from django.utils import timezone
 from .models import Reservation, TableTimeSlot, ReservationTimeSlot, Participant
 
-class TableTimeSlotSerializer(serializers.ModelSerializer):
-    # timeslot_range をローカルタイムに変換してから表示
-    timeslot_range = serializers.SerializerMethodField()
+from rest_framework import serializers
+from cafes.models import Reservation, TableTimeSlot
+
+
+class ParticipantSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()  # ここでCustomUserの情報を取得する
 
     class Meta:
-        model = TableTimeSlot
-        fields = ['id', 'timeslot_range', 'is_reserved', 'is_closed']
+        model = Participant
+        fields = ['user']
 
-    def get_timeslot_range(self, obj):
-        # タイムゾーンをローカルタイム（例: Asia/Tokyo）に変換
-        start_time = timezone.localtime(obj.timeslot_range.lower) if obj.timeslot_range.lower else None
-        end_time = timezone.localtime(obj.timeslot_range.upper) if obj.timeslot_range.upper else None
-        
-        # タイムスタンプがある場合は文字列に変換して返す
-        return {
-            "start": start_time.strftime('%Y-%m-%dT%H:%M:%S%z') if start_time else None,
-            "end": end_time.strftime('%Y-%m-%dT%H:%M:%S%z') if end_time else None
-        }
-
-class ReservationTimeSlotSerializer(serializers.ModelSerializer):
-    timeslot = TableTimeSlotSerializer(read_only=True)  # timeslotを読み取り専用に設定
-
-    class Meta:
-        model = ReservationTimeSlot
-        fields = ['timeslot']
 
 class ReservationSerializer(serializers.ModelSerializer):
-    reservation_timeslots = ReservationTimeSlotSerializer(source='timeslot_relations', many=True, read_only=True)  # timeslot_relationsのデータを取得し、読み取り専用に設定
+    # 最初のtimeslotのstart_time
+    start_time = serializers.DateTimeField(source='timeslot.first.timeslot_range.lower', read_only=True)
+    # 最後のtimeslotのend_time
+    end_time = serializers.DateTimeField(source='timeslot.last.timeslot_range.upper', read_only=True)
+
+    participants = ParticipantSerializer(source='user_relations', many=True, read_only=True)
 
     class Meta:
         model = Reservation
-        fields = ['id', 'cafe', 'table', 'reserved_at', 'reservation_type', 'reservation_timeslots']
+        fields = ['cafe', 'table', 'reserved_at', 'reservation_type', 'start_time', 'end_time', 'participants']
+
 
 

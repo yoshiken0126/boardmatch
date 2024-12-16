@@ -1,34 +1,54 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { format, addWeeks, startOfWeek, addDays, isSameDay, isWithinInterval, set, parseISO } from 'date-fns';
+import { format, addWeeks, startOfWeek, addDays, isSameDay, set, parseISO, differenceInMinutes } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Import the getToken function (assuming it's defined in a separate file)
+// トークン取得関数のインポート（別ファイルで定義されていると仮定）
 import { getToken } from '@/lib/auth';
 
 export const HOURS = Array.from({ length: 10 }, (_, i) => i + 13);
 
 // 予約バーのスタイルを計算する関数
 export function getReservationStyle(reservation) {
-  const startHour = parseInt(reservation.startTime.split(':')[0]);
-  const endHour = parseInt(reservation.endTime.split(':')[0]);
-  const startMinutes = parseInt(reservation.startTime.split(':')[1]);
-  const endMinutes = parseInt(reservation.endTime.split(':')[1]);
+  const startTime = parseISO(reservation.startTime);
+  const endTime = parseISO(reservation.endTime);
 
-  const start = (startHour - 13) * 60 + startMinutes;
-  const duration = (endHour - startHour) * 60 + (endMinutes - startMinutes);
+  // タイムラインの開始時間（13:00）からの経過分数を計算
+  const timelineStart = set(startTime, { hours: 13, minutes: 0, seconds: 0 });
+  const startOffset = differenceInMinutes(startTime, timelineStart);
+  const endOffset = differenceInMinutes(endTime, timelineStart);
+  
+  // タイムラインの全幅は10時間（600分）
+  const totalMinutes = 10 * 60;
+  
+  // パーセンテージ位置を計算
+  const leftPosition = (startOffset / totalMinutes) * 100;
+  const width = ((endOffset - startOffset) / totalMinutes) * 100;
+
+  // 幅が負にならないようにする
+  if (width < 0) {
+    return {}; // 無効な幅の場合は空のオブジェクトを返す
+  }
+
+  // 予約バーの幅を少し縮小し、マージンを追加
+  const marginPercentage = 0.5; // 0.5%のマージン（両側で合計1%）
+  const adjustedWidth = width - (marginPercentage * 2);
+  const adjustedLeft = leftPosition + marginPercentage;
+
+  const minWidth = 0.5; // 最小幅を0.5%に設定
+  const finalWidth = Math.max(adjustedWidth, minWidth);
 
   return {
     position: 'absolute',
-    left: `${(start / (9 * 60)) * 100}%`,
-    width: `${(duration / (9 * 60)) * 100}%`,
+    left: `${adjustedLeft}%`,
+    width: `${finalWidth}%`,
     height: '80%',
     top: '10%',
-    backgroundColor: 'hsl(var(--primary))',
+    backgroundColor: reservation.reservationType === 'user' ? 'hsl(var(--primary))' : 'hsl(var(--secondary))',
     borderRadius: '4px',
     color: 'hsl(var(--primary-foreground))',
     padding: '4px',
@@ -36,34 +56,63 @@ export function getReservationStyle(reservation) {
     overflow: 'hidden',
     whiteSpace: 'nowrap',
     textOverflow: 'ellipsis',
+    zIndex: 10,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)', // 影を追加してさらに区別しやすくする
   };
 }
 
-const mockReservations = [
-  { id: '1', tableId: 1, startTime: '14:00', endTime: '16:00', customerName: '山田太郎', date: '2024-12-09' },
-  { id: '2', tableId: 3, startTime: '18:30', endTime: '20:00', customerName: '佐藤花子', date: '2024-12-10' },
-  { id: '3', tableId: 2, startTime: '13:30', endTime: '15:30', customerName: '鈴木一郎', date: '2024-12-11' },
-];
+const parseReservations = (reservationsData) => {
+  return reservationsData.map(reservation => {
+    // 参加者の名前を抽出する処理を更新
+    const participantNames = Array.isArray(reservation.participants) 
+      ? reservation.participants.map(participant => {
+        // 参加者オブジェクトから'user'プロパティを抽出
+        return participant.user || 'Unknown';
+      })
+      : [];
+
+    return {
+      id: reservation.id || Math.random().toString(36).substr(2, 9),
+      tableId: reservation.table,
+      startTime: reservation.start_time,
+      endTime: reservation.end_time,
+      date: format(parseISO(reservation.start_time), 'yyyy-MM-dd'),
+      cafe: reservation.cafe,
+      reservationType: reservation.reservation_type,
+      participants: participantNames
+    };
+  });
+};
 
 export default function CafeReservation() {
+  // (以前のコンポーネントコードは全て同じです)
   const [selectedWeek, setSelectedWeek] = useState(0);
   const [tables, setTables] = useState([]);
   const [error, setError] = useState(null);
   const [cafeData, setCafeData] = useState(null);
-  const currentDate = new Date();
+  const [reservations, setReservations] = useState([]);
+  const [currentDate, setCurrentDate] = useState(null);
 
-  const weeks = Array.from({ length: 5 }, (_, i) => {
-    const weekStart = startOfWeek(addWeeks(currentDate, i), { weekStartsOn: 1 });
-    return Array.from({ length: 7 }, (_, j) => addDays(weekStart, j));
-  });
+  // (以下、前回提示したコンポーネントの残りのコードと全く同じです)
+  const weeks = useMemo(() => {
+    if (!currentDate) return [];
+    return Array.from({ length: 5 }, (_, i) => {
+      const weekStart = startOfWeek(addWeeks(currentDate, i), { weekStartsOn: 1 });
+      return Array.from({ length: 7 }, (_, j) => addDays(weekStart, j));
+    });
+  }, [currentDate]);
+
+  useEffect(() => {
+    setCurrentDate(new Date());
+  }, []);
 
   useEffect(() => {
     const fetchTables = async () => {
       try {
-        const token = getToken(); // Get the token
+        const token = getToken();
         const response = await axios.get('http://localhost:8000/cafes/api/tables/', {
           headers: {
-            Authorization: `Bearer ${token}`, // Include the token in the request headers
+            Authorization: `Bearer ${token}`,
           },
         });
         setTables(response.data.map(table => ({
@@ -82,46 +131,58 @@ export default function CafeReservation() {
   useEffect(() => {
     const fetchBoardGameCafe = async () => {
       try {
-        const token = getToken(); // Get the token
+        const token = getToken();
         const response = await fetch('http://localhost:8000/cafes/api/boardgamecafes/', {
           headers: {
-            Authorization: `Bearer ${token}`, // Include the token in the request headers
+            Authorization: `Bearer ${token}`,
           },
         });
         if (!response.ok) {
           throw new Error('Failed to fetch board game cafe data');
         }
         const data = await response.json();
-        console.log('Board Game Cafe Data:', data); // Log the fetched data to the console
         setCafeData(data[0]);
       } catch (err) {
         console.error('Error fetching board game cafe data:', err);
-        setCafeData(null); // Explicitly set to null if fetch fails
+        setCafeData(null);
       }
     };
 
     fetchBoardGameCafe();
   }, []);
 
+  useEffect(() => {
+    const fetchReservations = async () => {
+      try {
+        const token = getToken();
+        const response = await axios.get('http://localhost:8000/cafes/api/reservations/', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const parsedReservations = parseReservations(response.data);
+        setReservations(parsedReservations);
+      } catch (err) {
+        console.error('Error fetching reservations:', err);
+        setError('予約情報の取得に失敗しました。');
+      }
+    };
+
+    fetchReservations();
+  }, []);
+
   const isWithinBusinessHours = (day, hour) => {
-    // cafeDataがnullまたは未定義の場合は休業
     if (!cafeData) return false;
 
     const dayOfWeek = format(day, 'EEEE').toLowerCase();
     const openTimeKey = `${dayOfWeek}_open`;
     const closeTimeKey = `${dayOfWeek}_close`;
 
-    // 特定の曜日の開店・閉店時間がnullの場合は休業日
     const openTime = cafeData[openTimeKey];
     const closeTime = cafeData[closeTimeKey];
 
-    // 開店時間または閉店時間がnullの場合は休業
     if (openTime === null || closeTime === null) return false;
 
-    // 開店時間または閉店時間が未定義の場合も休業
-    if (!openTime || !closeTime) return false;
-
-    // 開店時間と閉店時間の解析
     const currentTime = set(day, { hours: hour, minutes: 0, seconds: 0 });
     const openDateTime = set(day, {
       hours: parseInt(openTime.split(':')[0]),
@@ -134,7 +195,6 @@ export default function CafeReservation() {
       seconds: 0
     });
 
-    // 閉店時間が開店時間より前の場合（深夜営業）の処理
     if (closeDateTime < openDateTime) {
       if (hour < parseInt(openDateTime.getHours())) {
         return false;
@@ -142,12 +202,15 @@ export default function CafeReservation() {
       closeDateTime.setDate(closeDateTime.getDate() + 1);
     }
 
-    // 営業時間内かどうかを判定
     return currentTime >= openDateTime && currentTime < closeDateTime;
   };
 
   if (error) {
     return <div className="text-red-500">{error}</div>;
+  }
+
+  if (!currentDate) {
+    return <div>Loading...</div>;
   }
 
   return (
@@ -200,27 +263,34 @@ export default function CafeReservation() {
                             ></div>
                           ))}
 
-                          {mockReservations
+                          {reservations
                             .filter((res) => {
-                              const reservationDate = new Date(res.date);
-                              const dayDate = new Date(day);
-
-                              if (isSameDay(reservationDate, dayDate) && res.tableId === table.id) {
-                                console.log(`Rendering reservation for table: ${table.name}, Customer: ${res.customerName}`);
-                                return true;
-                              }
-
-                              return false;
+                              const reservationDate = parseISO(res.date);
+                              return isSameDay(reservationDate, day) && res.tableId === table.id;
                             })
-                            .map((reservation) => (
-                              <div
-                                key={reservation.id}
-                                style={getReservationStyle(reservation)}
-                                title={`${reservation.customerName} (${reservation.startTime}-${reservation.endTime})`}
-                              >
-                                {reservation.customerName}
-                              </div>
-                            ))}
+                            .map((reservation) => {
+                              const startTime = format(parseISO(reservation.startTime), 'HH:mm');
+                              const endTime = format(parseISO(reservation.endTime), 'HH:mm');
+                              const participantsText = reservation.participants.slice(0, 3).join(', ');
+                              const extraParticipants = reservation.participants.length > 3 ? ` +${reservation.participants.length - 3}` : '';
+
+                              return (
+                                <div
+                                  key={reservation.id}
+                                  style={getReservationStyle(reservation)}
+                                  title={`予約 #${reservation.id} (${startTime}-${endTime})
+参加者: ${reservation.participants.join(', ')}`}
+                                >
+                                  <div className="text-xs font-semibold">{startTime}-{endTime}</div>
+                                  <div className="text-xs truncate">
+                                    {participantsText}{extraParticipants}
+                                  </div>
+                                  <div className="text-xs">
+                                    {reservation.reservationType === 'user' ? '予約' : '管理者予約'} #{reservation.id}
+                                  </div>
+                                </div>
+                              );
+                            })}
                         </div>
                       </React.Fragment>
                     ))}

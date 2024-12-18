@@ -16,6 +16,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 import numpy as np
 import datetime,random
 
+
 from accounts.serializers import CustomUserSerializer
 from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer
 from rest_framework import generics
@@ -25,6 +26,7 @@ from rest_framework import permissions,viewsets
 from .filters import UserGameRelationFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from accounts.permissions import IsCustomUser
+from cafes.models import TableTimeSlot,CafeTable
 
 
 # Create your views here.
@@ -307,6 +309,74 @@ def get_next_week_dates():
     next_week_dates = [next_monday + datetime.timedelta(days=i) for i in range(7)]
     return next_week_dates
 
+
+def get_available_table_counts(cafe_id):
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    # 現在の日時を取得
+    now = timezone.now()
+
+    # 現在の週の翌週の月曜日の日付を取得
+    start_of_next_week = now + timedelta(days=(7 - now.weekday()))
+    
+    # 返すべき結果を格納するリスト
+    available_table_counts = []
+
+    # 月曜日から日曜日まで、各日の13時～18時と18時～23時について調べる
+    for i in range(7):
+        # 各日の開始時刻と終了時刻を設定
+        current_day = start_of_next_week + timedelta(days=i)
+        
+        # 13:00～18:00のスロット
+        start_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 13, 0))
+        end_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+        
+        # 18:00～23:00のスロット
+        start_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+        end_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 23, 0))
+        
+        # 13:00～18:00の予約可能なテーブル数を計算
+        available_count_13_18 = count_available_tables(cafe_id, start_time_13_18, end_time_13_18)
+        
+        # 18:00～23:00の予約可能なテーブル数を計算
+        available_count_18_23 = count_available_tables(cafe_id, start_time_18_23, end_time_18_23)
+
+        # 結果をリストに追加
+        available_table_counts.append(available_count_13_18)
+        available_table_counts.append(available_count_18_23)
+    
+    return available_table_counts
+
+
+def count_available_tables(cafe_id, start_time, end_time):
+    # 指定されたカフェIDに関連するテーブルを取得
+    cafe_tables = CafeTable.objects.filter(cafe_id=cafe_id)
+
+    # 指定された時間帯に重なる TableTimeSlot を取得
+    timeslots = TableTimeSlot.objects.filter(timeslot_range__overlap=(start_time, end_time))
+
+    available_table_count = 0
+
+    # テーブルごとにフィルタリング
+    for table in cafe_tables:
+        # このテーブルに関連する timeslot を取得
+        table_timeslots = timeslots.filter(table=table)
+
+        # そのテーブルに関連するすべての時間帯が「予約されていない」かを確認
+        all_available = True
+        for slot in table_timeslots:
+            if slot.is_reserved:
+                all_available = False
+                break
+        
+        # すべての時間帯が予約されていない場合、そのテーブルをカウント
+        if all_available:
+            available_table_count += 1
+    
+    return available_table_count
+
+
+
 def try_optimize(request):
     cafes = BoardGameCafe.objects.all()
     active_users = CustomUser.objects.filter(is_optimize_active=True)
@@ -375,9 +445,35 @@ def try_optimize(request):
                 else:
                     pass
 
-    for day in range(num_days):
-        for cafe in range(num_cafes):
-            m += xsum(x[day,:,cafe]) <= 4
+    from django.utils import timezone
+    from datetime import datetime
+    from cafes.models import TableTimeSlot
+    from cafes.models import CafeTable
+
+    # カフェIDを指定
+    cafe_id = 7  # 例としてカフェIDを1に指定
+
+
+
+    otinpo = get_available_table_counts(cafe_id)
+    print(otinpo)
+
+    cafe_reservations_count_list = []
+    for cafe in cafes:
+        weekly_list = get_available_table_counts(cafe)
+        cafe_reservations_count_list.append(weekly_list)
+
+    print(cafe_reservations_count_list)
+
+    
+
+    
+
+
+
+    for cafe in range(num_cafes):
+        for day in range(num_days):
+            m += xsum(x[day,:,cafe]) <= 4*cafe_reservations_count_list[cafe][day]
 
 
 
@@ -553,7 +649,11 @@ def try_optimize(request):
                 matchday_choice = GameChoice.objects.create(matchday=matchday,game=game)
 
 
+    #ここからnext.js表示用
 
+
+
+    #ここまでnext.js表示用
     val = ff_true.astype(float, subok=False).round()
     game_x = gf_true.astype(float, subok=False).round()
     val_x = x.astype(float, subok=False).round()

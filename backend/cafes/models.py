@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.postgres.fields import DateTimeRangeField
 from django.utils import timezone
 from datetime import timedelta, datetime
+from django.db.models import Count
 
 
 # Create your models here.
@@ -28,6 +29,17 @@ class CafeTable(models.Model):
     cafe = models.ForeignKey('accounts.BoardGameCafe',on_delete=models.CASCADE,related_name="table_relations",)
     table_name = models.CharField(max_length=10)
     capacity = models.PositiveIntegerField(default=4)
+
+
+    def __str__(self):
+        """
+        テーブルの文字列表現
+        """
+        return f"{self.table_name} (Capacity: {self.capacity})"
+
+
+
+
 
     def __str__(self):
         return self.table_name
@@ -75,6 +87,8 @@ class TableTimeSlot(models.Model):
     timeslot_range = DateTimeRangeField(null=True)  # start_time と end_time を範囲型で表現
     is_reserved = models.BooleanField(default=False)
     is_closed = models.BooleanField(default=False)
+
+    
 
     def __str__(self):
         # タイムゾーンをローカルタイム（例: Asia/Tokyo）に変換

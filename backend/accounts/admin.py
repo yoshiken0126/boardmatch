@@ -10,7 +10,7 @@ class CafeStaffAdmin(admin.ModelAdmin):
     list_display = ('username', 'cafe')
 
 class BoardGameCafeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'monday_hours', 'tuesday_hours', 'wednesday_hours', 'thursday_hours', 'friday_hours', 'saturday_hours', 'sunday_hours')
+    list_display = ('id','name', 'monday_hours', 'tuesday_hours', 'wednesday_hours', 'thursday_hours', 'friday_hours', 'saturday_hours', 'sunday_hours')
 
     def monday_hours(self, obj):
         return obj.get_opening_hours('monday')

@@ -26,7 +26,8 @@ from rest_framework import permissions,viewsets
 from .filters import UserGameRelationFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from accounts.permissions import IsCustomUser
-from cafes.models import TableTimeSlot,CafeTable
+from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot
+
 
 
 # Create your views here.
@@ -375,6 +376,105 @@ def count_available_tables(cafe_id, start_time, end_time):
     
     return available_table_count
 
+#空いているテーブルIDを取得する
+
+def get_available_table_ids_for_week(cafe_id):
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    from cafes.models import CafeTable, TableTimeSlot
+    # 現在の日時を取得
+    now = timezone.now()
+    
+    # 現在の週の翌週の月曜日の日付を取得
+    start_of_next_week = now + timedelta(days=(7 - now.weekday()))
+    
+    # 返すべき結果を格納するリスト
+    available_table_ids = []
+
+    # 月曜日から日曜日まで、各日の13時～18時と18時～23時について調べる
+    for i in range(7):
+        # 各日の開始時刻と終了時刻を設定
+        current_day = start_of_next_week + timedelta(days=i)
+        
+        # 13:00～18:00のスロット
+        start_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 13, 0))
+        end_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+        
+        # 18:00～23:00のスロット
+        start_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+        end_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 23, 0))
+        
+        # 予約可能なテーブルIDを取得（13:00～18:00）
+        available_ids_13_18 = get_available_table_ids_for_slot(cafe_id, start_time_13_18, end_time_13_18)
+        
+        # 予約可能なテーブルIDを取得（18:00～23:00）
+        available_ids_18_23 = get_available_table_ids_for_slot(cafe_id, start_time_18_23, end_time_18_23)
+
+        # 結果をリストに追加
+        available_table_ids.append(available_ids_13_18)
+        available_table_ids.append(available_ids_18_23)
+    
+    return available_table_ids
+
+
+def get_available_table_ids_for_slot(cafe_id, start_time, end_time):
+    # 指定されたカフェIDに関連するテーブルを取得
+    cafe_tables = CafeTable.objects.filter(cafe_id=cafe_id)
+
+    # 指定された時間帯に重なる TableTimeSlot を取得
+    timeslots = TableTimeSlot.objects.filter(timeslot_range__overlap=(start_time, end_time))
+
+    available_table_ids = []
+
+    # テーブルごとにフィルタリング
+    for table in cafe_tables:
+        # このテーブルに関連する timeslot を取得
+        table_timeslots = timeslots.filter(table=table)
+
+        # そのテーブルに関連するすべての時間帯が「予約されていない」かを確認
+        all_available = True
+        for slot in table_timeslots:
+            if slot.is_reserved or slot.is_closed:
+                all_available = False
+                break
+        
+        # すべての時間帯が予約されていない場合、そのテーブルIDをリストに追加
+        if all_available:
+            available_table_ids.append(table.id)
+    
+    return available_table_ids
+
+
+def generate_time_slots():
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    # 現在の週の翌週の月曜日の日付を取得
+    now = timezone.now()
+    start_of_next_week = now + timedelta(days=(7 - now.weekday()))
+
+    # スタートタイムとエンドタイムのリスト
+    start_times = []
+    end_times = []
+
+    # 月曜日から日曜日まで、各日の13時～18時と18時～23時について調べる
+    for i in range(7):
+        current_day = start_of_next_week + timedelta(days=i)
+        
+        # 13:00～18:00のスロット
+        start_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 13, 0))
+        end_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+        
+        # 18:00～23:00のスロット
+        start_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+        end_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 23, 0))
+        
+        # リストに追加
+        start_times.extend([start_time_13_18, start_time_18_23])
+        end_times.extend([end_time_13_18, end_time_18_23])
+
+    return start_times, end_times
+
+
 
 
 def try_optimize(request):
@@ -445,6 +545,8 @@ def try_optimize(request):
                 else:
                     pass
 
+    #カフェの空きテーブルに応じたカフェ毎のマッチング総数を定義。まだ途中。
+
     from django.utils import timezone
     from datetime import datetime
     from cafes.models import TableTimeSlot
@@ -456,7 +558,7 @@ def try_optimize(request):
 
 
     otinpo = get_available_table_counts(cafe_id)
-    print(otinpo)
+    print(f'これはotinpoです{otinpo}')
 
     cafe_reservations_count_list = []
     for cafe in cafes:
@@ -602,8 +704,10 @@ def try_optimize(request):
     #ユーザーインデックスの辞書を作成
     userdict = {i:user.username for i,user in enumerate(active_users)}
     #カフェインデックスの辞書を作成
+    cafe_id_dict = {i:cafe.id for i,cafe in enumerate(cafes)}
     cafedict = {i:cafe.name for i,cafe in enumerate(cafes)}
     daydict = get_next_week_dates()
+    start_times, end_times = generate_time_slots()
 
     result_list = np.array([[[int(cafe.x) for cafe in user] for user in day] for day in x])
     result_index_np = np.where(result_list == 1)
@@ -621,6 +725,13 @@ def try_optimize(request):
                 random.shuffle(user_index_in_cafe1)
                 user_index_in_cafe2 = [user_index_in_cafe1[i:i + 4] for i in range(0, len(user_index_in_cafe1), 4)]
                 user_group_in_cafe.append(user_index_in_cafe2)
+
+    print(f'これはuser_group_in_cafeです{user_group_in_cafe}')
+    print(f'これはresult_listです{result_list}')
+    print(f'これはresult_indexです{result_index}')
+    print(f'これはdaydictです{daydict}')
+    print(f'これはresult_user_day_dictです{result_user_day_dict}')
+    print(f'これはresult_user_cafe_dictです{result_user_cafe_dict}')
 
 
     for cafe in range(len(user_group_in_cafe)):
@@ -650,6 +761,44 @@ def try_optimize(request):
 
 
     #ここからnext.js表示用
+    omanko = get_available_table_ids_for_week(cafe_id)
+    print(f'これはおまんこです{omanko}')
+    print(cafe_id_dict[0])
+    print(start_times)
+
+    for cafe in range(len(user_group_in_cafe)):
+        for group in user_group_in_cafe[cafe]:
+            available_table_list = get_available_table_ids_for_week(cafe_id_dict[result_user_cafe_dict[group[0]]])
+
+            cafe = BoardGameCafe.objects.get(id=cafe_id_dict[result_user_cafe_dict[group[0]]])
+            table = CafeTable.objects.get(id=available_table_list[result_user_day_dict[group[0]]][0])
+            reservations = Reservation.objects.create(cafe=cafe,table=table)
+            timeslots = TableTimeSlot.objects.filter(table=table,timeslot_range__overlap=(start_times[result_user_day_dict[group[0]]], end_times[result_user_day_dict[group[0]]]))
+            for timeslot in timeslots:
+                reservation_timeslot = ReservationTimeSlot.objects.create(reservation=reservations,timeslot=timeslot)
+
+            cafe = BoardGameCafe.objects.get(name=cafedict[result_user_cafe_dict[group[0]]])
+            day = daydict[result_user_day_dict[group[0]]]
+            matchday = MatchDay.objects.create(day=day,cafe=cafe)
+
+            choice_game_want_toplay = BoardGame.objects.none()
+            choice_game_can_instruct = BoardGame.objects.none()
+            cafegame = BoardGame.objects.filter(cafe_relations__cafe=cafe)
+            for user_index in group:
+                user = CustomUser.objects.get(username=userdict[user_index])
+                matchday_user = MatchDayUser.objects.create(matchday=matchday,user=user)
+
+
+                wantgame = BoardGame.objects.filter(user_relations__user=user, user_relations__want_to_play=True)
+                cangame = BoardGame.objects.filter(user_relations__user=user, user_relations__can_instruct=True)
+                #choice_game_want_toplay.update(cafegame & wantgame)
+                #choice_game_can_instruct.update(cafegame & cangame)
+                choice_game_want_toplay = wantgame | choice_game_want_toplay
+                choice_game_can_instruct = cangame | choice_game_can_instruct
+
+            game_choice = (choice_game_want_toplay & choice_game_can_instruct & cafegame).distinct()
+            for game in game_choice:
+                matchday_choice = GameChoice.objects.create(matchday=matchday,game=game)
 
 
 

@@ -14,7 +14,7 @@ from .models import CafeTable, TableTimeSlot, Reservation, Participant, Reservat
 
 # CafeTable 管理画面設定
 class CafeTableAdmin(admin.ModelAdmin):
-    list_display = ('table_name', 'cafe', 'capacity')
+    list_display = ('id','table_name', 'cafe', 'capacity')
     search_fields = ('table_name', 'cafe__name')  # カフェ名で検索可能
     list_filter = ('cafe',)  # カフェで絞り込み
 

@@ -26,7 +26,7 @@ from rest_framework import permissions,viewsets
 from .filters import UserGameRelationFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from accounts.permissions import IsCustomUser
-from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot
+from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant
 
 
 
@@ -772,10 +772,14 @@ def try_optimize(request):
 
             cafe = BoardGameCafe.objects.get(id=cafe_id_dict[result_user_cafe_dict[group[0]]])
             table = CafeTable.objects.get(id=available_table_list[result_user_day_dict[group[0]]][0])
-            reservations = Reservation.objects.create(cafe=cafe,table=table)
+            reservation = Reservation.objects.create(cafe=cafe,table=table)
             timeslots = TableTimeSlot.objects.filter(table=table,timeslot_range__overlap=(start_times[result_user_day_dict[group[0]]], end_times[result_user_day_dict[group[0]]]))
+            timeslots.update(is_reserved=True)
             for timeslot in timeslots:
-                reservation_timeslot = ReservationTimeSlot.objects.create(reservation=reservations,timeslot=timeslot)
+                reservation_timeslot = ReservationTimeSlot.objects.create(reservation=reservation,timeslot=timeslot)
+            for user_index in group:
+                user = CustomUser.objects.get(username=userdict[user_index])
+                participant = Participant.objects.create(reservation=reservation,user=user)
 
             cafe = BoardGameCafe.objects.get(name=cafedict[result_user_cafe_dict[group[0]]])
             day = daydict[result_user_day_dict[group[0]]]

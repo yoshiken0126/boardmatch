@@ -18,7 +18,7 @@ import datetime,random
 
 
 from accounts.serializers import CustomUserSerializer
-from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer
+from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer,ReservationSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -147,6 +147,19 @@ class UserInfoViewSet(viewsets.GenericViewSet):
             serializer.save()  # ユーザー情報を保存
             return Response(serializer.data)  # 更新したデータを返す
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ReservationViewSet(viewsets.ModelViewSet):
+    queryset = Reservation.objects.all()  # 予約の一覧を取得
+    serializer_class = ReservationSerializer  # 使用するシリアライザを指定
+    permission_classes = [IsCustomUser]  # 認証を要求
+
+    def perform_create(self, serializer):
+        """
+        予約の作成時に perform_create をオーバーライドして、
+        予約のロジックをシリアライザに任せたまま、保存処理を行います
+        """
+        # シリアライザで定義された create メソッドを呼び出す
+        serializer.save()
 
 
 

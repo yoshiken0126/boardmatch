@@ -111,6 +111,7 @@ class TableTimeSlot(models.Model):
 class Reservation(models.Model):
     cafe = models.ForeignKey('accounts.BoardGameCafe', on_delete=models.CASCADE)  # どのカフェで予約か
     table = models.ForeignKey('cafes.CafeTable', on_delete=models.CASCADE)
+    count = models.PositiveIntegerField(default=4)
     participant = models.ManyToManyField('accounts.CustomUser',through='Participant')
     timeslot = models.ManyToManyField('cafes.TableTimeSlot',through='ReservationTimeSlot')
     reserved_at = models.DateTimeField(auto_now_add=True)

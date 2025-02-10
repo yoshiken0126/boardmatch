@@ -785,7 +785,7 @@ def try_optimize(request):
 
             cafe = BoardGameCafe.objects.get(id=cafe_id_dict[result_user_cafe_dict[group[0]]])
             table = CafeTable.objects.get(id=available_table_list[result_user_day_dict[group[0]]][0])
-            reservation = Reservation.objects.create(cafe=cafe,table=table)
+            reservation = Reservation.objects.create(cafe=cafe,table=table,reservation_type='match')
             timeslots = TableTimeSlot.objects.filter(table=table,timeslot_range__overlap=(start_times[result_user_day_dict[group[0]]], end_times[result_user_day_dict[group[0]]]))
             timeslots.update(is_reserved=True)
             for timeslot in timeslots:

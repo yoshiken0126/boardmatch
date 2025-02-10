@@ -97,13 +97,20 @@ class ReservationSerializer(serializers.ModelSerializer):
 
         available_table = CafeTable.objects.get(id=available_table_ids[0])
 
+        user = self.context['request'].user  # 現在のユーザーを取得
+        if user.user_type == 'staff_user':
+            reservation_type = 'staff'
+        else:
+            reservation_type = 'user'
+
+
 
         reservation = Reservation.objects.create(
             cafe=cafe,
             table=available_table,
             count=validated_data['numberOfPeople'],
             reserved_at=timezone.now(),
-            reservation_type='user'  # 予約タイプを変更可能
+            reservation_type=reservation_type  # 予約タイプを変更可能
         )
         timeslots = TableTimeSlot.objects.filter(table=available_table,timeslot_range__overlap=(start_time, end_time))
         timeslots.update(is_reserved=True)

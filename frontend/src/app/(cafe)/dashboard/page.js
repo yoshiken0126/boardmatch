@@ -58,16 +58,27 @@ export function getReservationStyle(reservation) {
     width: `${finalWidth}%`,
     height: "80%",
     top: "10%",
-    backgroundColor: reservation.reservationType === "user" ? "hsl(var(--primary))" : "hsl(var(--secondary))",
+    backgroundColor: (() => {
+        switch (reservation.reservationType) {
+            case "user":
+                return "hsl(142, 76%, 36%)";  // 濃い緑
+            case "match":
+                return "hsl(217, 91%, 30%)";  // 濃い青
+            case "staff":
+                return "hsl(0, 84%, 40%)";    // 濃い赤
+            default:
+                return "hsl(var(--secondary))";
+        }
+    })(),
     borderRadius: "4px",
-    color: "hsl(var(--primary-foreground))",
+    color: "#ffffff",  // テキストは白で統一
     padding: "4px",
     fontSize: "0.75rem",
     overflow: "hidden",
     whiteSpace: "nowrap",
     textOverflow: "ellipsis",
     zIndex: 10,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)", // 影を追加してさらに区別しやすくする
+    boxShadow: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
   }
 }
 
@@ -335,9 +346,16 @@ export default function CafeReservation() {
       setNumberOfPeople(2)
       setError("")
 
+      const new_reservation = await axios.get("http://localhost:8000/cafes/api/reservations/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      console.log(new_reservation)
+
       // 予約リストを更新
-      const updatedReservations = [...reservations, parseReservations([response.data])[0]]
-      setReservations(updatedReservations)
+      const parsedReservations = parseReservations(new_reservation.data)
+      setReservations(parsedReservations)
     } catch (error) {
       console.error("予約の送信中にエラーが発生しました:", error)
       setError("予約の送信中にエラーが発生しました")

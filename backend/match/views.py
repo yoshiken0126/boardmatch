@@ -25,7 +25,7 @@ from rest_framework.response import Response
 from rest_framework import permissions,viewsets
 from .filters import UserGameRelationFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from accounts.permissions import IsCustomUser
+from accounts.permissions import IsCustomUser,IsCustomUserOrIsStaffUser
 from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant
 
 
@@ -151,7 +151,7 @@ class UserInfoViewSet(viewsets.GenericViewSet):
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()  # 予約の一覧を取得
     serializer_class = ReservationSerializer  # 使用するシリアライザを指定
-    permission_classes = [IsCustomUser]  # 認証を要求
+    permission_classes = [IsCustomUserOrIsStaffUser]  # 認証を要求
 
     def perform_create(self, serializer):
         """

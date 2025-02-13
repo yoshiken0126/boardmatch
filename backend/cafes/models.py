@@ -130,3 +130,27 @@ class ReservationTimeSlot(models.Model):
     class Meta:
         unique_together = ('reservation', 'timeslot')  # 同じ予約とタイムスロットの組み合わせを一意に
 
+class Message(models.Model):
+    reservation = models.ForeignKey('cafes.Reservation', on_delete=models.CASCADE, related_name='messages')  # メッセージが紐づく予約
+    sender = models.ForeignKey('accounts.BaseUser', on_delete=models.CASCADE, null=True, blank=True)  # ユーザーが送信したメッセージ
+    sender_is_staff = models.BooleanField(default=False)  # スタッフが送信したメッセージかどうか
+    content = models.TextField()  # メッセージの内容
+    sent_at = models.DateTimeField(auto_now_add=True)  # メッセージ送信日時
+    read_by = models.ManyToManyField(
+        'accounts.CustomUser', 
+        related_name='read_messages', 
+        blank=True
+    )  # メッセージを読んだユーザー
+    read_by_staff = models.ManyToManyField(  # スタッフがメッセージを読んだか追跡する
+        'accounts.CafeStaff',
+        related_name='read_messages',
+        blank=True
+    )
+    is_deleted = models.BooleanField(default=False)  # メッセージが削除されたかどうか
+
+    def __str__(self):
+        sender_name = "スタッフ" if self.sender_is_staff else str(self.sender)
+        return f"Message from {sender_name} on {self.sent_at}"
+
+    class Meta:
+        ordering = ['sent_at']  # 送信日時順に並べる

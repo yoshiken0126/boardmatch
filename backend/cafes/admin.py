@@ -1,4 +1,4 @@
-from cafes.models import CafeGameRelation, StaffGameRelation
+from cafes.models import CafeGameRelation, StaffGameRelation,Message
 from django.contrib import admin
 from django.utils import timezone
 
@@ -84,12 +84,28 @@ class ReservationTimeSlotAdmin(admin.ModelAdmin):
         return start_time.strftime('%Y-%m-%d %H:%M:%S')  # 開始時刻
     get_timeslot_start_time.short_description = 'Start Time'  # カラム名を指定
 
+
+
+class MessageAdmin(admin.ModelAdmin):
+    # 管理画面で表示するカラム
+    list_display = ('reservation', 'sender','content', 'sent_at', 'sender_is_staff', 'is_deleted')
+    
+    # メッセージ送信日時で並べ替え
+    ordering = ('-sent_at',)
+    
+    # 検索機能
+    search_fields = ('reservation__id', 'sender__username', 'content')
+
+
+
+
 # モデルを管理画面に登録
 admin.site.register(CafeTable, CafeTableAdmin)
 admin.site.register(TableTimeSlot, TableTimeSlotAdmin)
 admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(Participant, ParticipantAdmin)
 admin.site.register(ReservationTimeSlot, ReservationTimeSlotAdmin)
+admin.site.register(Message, MessageAdmin)
 
 
 

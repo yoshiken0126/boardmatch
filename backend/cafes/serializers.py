@@ -42,6 +42,15 @@ class ReservationSerializer(serializers.ModelSerializer):
     end_time = serializers.DateTimeField(source='timeslot.last.timeslot_range.upper', read_only=True)
 
     participants = ParticipantSerializer(source='user_relations', many=True, read_only=True)
+    table = serializers.SerializerMethodField()
+
+    def get_table(self, obj):
+        # timeslotに紐づくすべてのテーブルのIDをユニークに取得
+        tables = obj.timeslot.all().values_list('table__id', flat=True)
+        # 重複を取り除いてリストに変換
+        unique_tables = list(set(tables))
+        return unique_tables
+
 
     class Meta:
         model = Reservation

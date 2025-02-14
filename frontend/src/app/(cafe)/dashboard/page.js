@@ -59,19 +59,19 @@ export function getReservationStyle(reservation) {
     height: "80%",
     top: "10%",
     backgroundColor: (() => {
-        switch (reservation.reservationType) {
-            case "user":
-                return "hsl(142, 76%, 36%)";  // 濃い緑
-            case "match":
-                return "hsl(217, 91%, 30%)";  // 濃い青
-            case "staff":
-                return "hsl(0, 84%, 40%)";    // 濃い赤
-            default:
-                return "hsl(var(--secondary))";
-        }
+      switch (reservation.reservationType) {
+        case "user":
+          return "hsl(142, 76%, 36%)" // 濃い緑
+        case "match":
+          return "hsl(217, 91%, 30%)" // 濃い青
+        case "staff":
+          return "hsl(0, 84%, 40%)" // 濃い赤
+        default:
+          return "hsl(var(--secondary))"
+      }
     })(),
     borderRadius: "4px",
-    color: "#ffffff",  // テキストは白で統一
+    color: "#ffffff", // テキストは白で統一
     padding: "4px",
     fontSize: "0.75rem",
     overflow: "hidden",
@@ -84,17 +84,13 @@ export function getReservationStyle(reservation) {
 
 const parseReservations = (reservationsData) => {
   return reservationsData.map((reservation) => {
-    // 参加者の名前を抽出する処理を更新
     const participantNames = Array.isArray(reservation.participants)
-      ? reservation.participants.map((participant) => {
-          // 参加者オブジェクトから'user'プロパティを抽出
-          return participant.user || "Unknown"
-        })
+      ? reservation.participants.map((participant) => participant.user || "Unknown")
       : []
 
     return {
       id: reservation.id || Math.random().toString(36).substr(2, 9),
-      tableId: reservation.table,
+      tableIds: reservation.table, // Change tableId to tableIds
       startTime: reservation.start_time,
       endTime: reservation.end_time,
       date: format(parseISO(reservation.start_time), "yyyy-MM-dd"),
@@ -191,6 +187,7 @@ export default function CafeReservation() {
         })
         const parsedReservations = parseReservations(response.data)
         setReservations(parsedReservations)
+        console.log(response)
       } catch (err) {
         console.error("Error fetching reservations:", err)
         setError("予約情報の取得に失敗しました。")
@@ -422,7 +419,7 @@ export default function CafeReservation() {
                           {reservations
                             .filter((res) => {
                               const reservationDate = parseISO(res.date)
-                              return isSameDay(reservationDate, day) && res.tableId === table.id
+                              return isSameDay(reservationDate, day) && res.tableIds.includes(table.id)
                             })
                             .map((reservation) => {
                               const startTime = format(parseISO(reservation.startTime), "HH:mm")
@@ -584,5 +581,3 @@ export default function CafeReservation() {
     </div>
   )
 }
-
-

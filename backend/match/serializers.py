@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from accounts.models import BoardGame,BoardGameCafe,CustomUser
 from match.models import UserGameRelation,UserFreeTime,UserCafeRelation,UserRelation
-from cafes.models import Reservation,TableTimeSlot,CafeTable,ReservationTimeSlot
+from cafes.models import Reservation,TableTimeSlot,CafeTable,ReservationTimeSlot,Participant
 from django.utils import timezone
 from datetime import datetime
 
@@ -102,12 +102,13 @@ class ReservationSerializer(serializers.ModelSerializer):
             reservation_type = 'staff'
         else:
             reservation_type = 'user'
+        
+        print(user)
 
 
 
         reservation = Reservation.objects.create(
             cafe=cafe,
-            table=available_table,
             count=validated_data['numberOfPeople'],
             reserved_at=timezone.now(),
             reservation_type=reservation_type  # 予約タイプを変更可能
@@ -116,6 +117,13 @@ class ReservationSerializer(serializers.ModelSerializer):
         timeslots.update(is_reserved=True)
         for timeslot in timeslots:
             reservation_timeslot = ReservationTimeSlot.objects.create(reservation=reservation,timeslot=timeslot)
+        
+        if user.user_type == 'custom_user':
+            user = CustomUser.objects.get(id=user.id)
+            participant = Participant.objects.create(reservation=reservation,user=user)
+
+        
+        
 
         return reservation
 

@@ -745,8 +745,8 @@ def try_optimize(request):
     print(f'これはdaydictです{daydict}')
     print(f'これはresult_user_day_dictです{result_user_day_dict}')
     print(f'これはresult_user_cafe_dictです{result_user_cafe_dict}')
-
-
+    
+    '''
     for cafe in range(len(user_group_in_cafe)):
         for group in user_group_in_cafe[cafe]:
             cafe = BoardGameCafe.objects.get(name=cafedict[result_user_cafe_dict[group[0]]])
@@ -770,12 +770,12 @@ def try_optimize(request):
 
             game_choice = (choice_game_want_toplay & choice_game_can_instruct & cafegame).distinct()
             for game in game_choice:
-                matchday_choice = GameChoice.objects.create(matchday=matchday,game=game)
+                matchday_choice = GameChoice.objects.create(matchday=matchday,game=game)'''
 
 
     #ここからnext.js表示用
     omanko = get_available_table_ids_for_week(cafe_id)
-    print(f'これはおまんこです{omanko}')
+    print(f'これはomankoです{omanko}')
     print(cafe_id_dict[0])
     print(start_times)
 
@@ -785,7 +785,7 @@ def try_optimize(request):
 
             cafe = BoardGameCafe.objects.get(id=cafe_id_dict[result_user_cafe_dict[group[0]]])
             table = CafeTable.objects.get(id=available_table_list[result_user_day_dict[group[0]]][0])
-            reservation = Reservation.objects.create(cafe=cafe,table=table,reservation_type='match')
+            reservation = Reservation.objects.create(cafe=cafe,reservation_type='match')
             timeslots = TableTimeSlot.objects.filter(table=table,timeslot_range__overlap=(start_times[result_user_day_dict[group[0]]], end_times[result_user_day_dict[group[0]]]))
             timeslots.update(is_reserved=True)
             for timeslot in timeslots:

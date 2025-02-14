@@ -43,9 +43,9 @@ class TableTimeSlotAdmin(admin.ModelAdmin):
 
 # Reservation 管理画面設定
 class ReservationAdmin(admin.ModelAdmin):
-    list_display = ('cafe', 'table','count', 'reserved_at', 'reservation_type', 'get_participants', 'get_timeslots')
-    search_fields = ('cafe__name', 'table__table_name')
-    list_filter = ('cafe', 'reservation_type')  # カフェや予約タイプでフィルタリング
+    list_display = ('cafe','count', 'reserved_at', 'reservation_type', 'get_participants', 'get_timeslots','is_active')
+    search_fields = ('cafe__name',)
+    list_filter = ('cafe', 'reservation_type','is_active')  # カフェや予約タイプでフィルタリング
     date_hierarchy = 'reserved_at'  # 予約日で絞り込み
 
     # 参加者を表示するカスタムメソッド

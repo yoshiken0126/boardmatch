@@ -44,6 +44,9 @@ class ReservationSerializer(serializers.ModelSerializer):
     participants = ParticipantSerializer(source='user_relations', many=True, read_only=True)
     table = serializers.SerializerMethodField()
 
+    # カフェ名を取得するためのフィールドを追加
+    cafe_name = serializers.SerializerMethodField()
+
     def get_table(self, obj):
         # timeslotに紐づくすべてのテーブルのIDをユニークに取得
         tables = obj.timeslot.all().values_list('table__id', flat=True)
@@ -51,10 +54,32 @@ class ReservationSerializer(serializers.ModelSerializer):
         unique_tables = list(set(tables))
         return unique_tables
 
+    def get_cafe_name(self, obj):
+        # カフェの名前を取得（カフェが存在する場合）
+        return obj.cafe.name if obj.cafe else None
 
+    def to_representation(self, instance):
+        # ユーザータイプを取得
+        user = self.context['request'].user  # リクエストから現在のユーザーを取得
+        user_type = user.user_type  # ユーザータイプを取得
+
+        # スタッフユーザーの場合は全ての予約情報をそのまま返す
+        if user_type == 'staff_user':
+            return super().to_representation(instance)
+
+        if user_type == 'custom_user':
+        # カスタムユーザーの参加している予約かつ is_active=True の条件でフィルタリング
+            if instance.user_relations.filter(user=user, reservation__is_active=True).exists():
+                return super().to_representation(instance)
+            return {}  # 条件に合わない場合は空の辞書を返す
+
+            # デフォルトの返却（必要なら他のユーザータイプにも対応）
+        return super().to_representation(instance)
+
+    
     class Meta:
         model = Reservation
-        fields = ['cafe', 'table','count', 'reserved_at', 'reservation_type', 'start_time', 'end_time', 'participants']
+        fields = ['id', 'cafe', 'cafe_name', 'table', 'count', 'reserved_at', 'reservation_type', 'start_time', 'end_time', 'participants', 'is_active']
 
 
 

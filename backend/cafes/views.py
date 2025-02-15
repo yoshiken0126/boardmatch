@@ -85,9 +85,17 @@ class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
     serializer_class = ReservationSerializer
 
-    # 追加のカスタマイズが必要な場合、ここでオーバーライド
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        user = request.user  # リクエストから現在のユーザーを取得
+        user_type = user.user_type  # ユーザータイプを取得
+
+        # カスタムユーザーの場合、ユーザーが参加している予約のみ取得
+        if user_type == 'custom_user':
+            queryset = self.get_queryset().filter(user_relations__user=user, is_active=True)
+        else:
+            queryset = self.get_queryset()
+
+        # シリアライズ
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 

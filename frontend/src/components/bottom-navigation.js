@@ -4,8 +4,10 @@ import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Coffee, Hexagon, Hourglass, UserRound, Shrink } from "lucide-react"
+import { getToken } from "@/lib/auth"
+import axios from "axios"
 
-// 日付をフォーマットする関数
+// 日付と時間をフォーマットする関数
 const formatDate = (dateString) => {
   const date = new Date(dateString)
   const month = date.getMonth() + 1
@@ -14,21 +16,62 @@ const formatDate = (dateString) => {
   return `${month}月${day}日(${dayOfWeek})`
 }
 
-// モックデータ（numberOfPeopleフィールドを追加）
-const mockReservations = [
-  { id: 1, cafeName: "Meeple Cafe", date: "2025-02-15", timeSlot: "19:00-22:00", numberOfPeople: 4 },
-  { id: 2, cafeName: "Study Boards", date: "2025-02-18", timeSlot: "14:00-17:00", numberOfPeople: 2 },
-  { id: 3, cafeName: "Dice & Coffee", date: "2025-02-20", timeSlot: "18:00-21:00", numberOfPeople: 3 },
-]
+const formatTimeSlot = (startTime, endTime) => {
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  return `${start.getHours()}:00-${end.getHours()}:00`
+}
 
-const BottomNavigation = ({ reservations = mockReservations }) => {
+const formatReservation = (reservation) => {
+  return {
+    id: reservation.id,
+    cafeName: ` ${reservation.cafe_name}`, // カフェ名はAPIから取得する必要があります
+    date: reservation.start_time,
+    timeSlot: formatTimeSlot(reservation.start_time, reservation.end_time),
+    numberOfPeople: reservation.count,
+    participants: reservation.participants
+  }
+}
+
+const BottomNavigation = () => {
   const pathname = usePathname()
   const [activeTab, setActiveTab] = useState("/")
   const [isReservationMenuOpen, setIsReservationMenuOpen] = useState(false)
+  const [reservations, setReservations] = useState([])
+  const [error, setError] = useState("")
 
   useEffect(() => {
     setActiveTab(pathname || "/")
   }, [pathname])
+
+  useEffect(() => {
+    const fetchReservations = async () => {
+      try {
+        const token = getToken()
+        const response = await axios.get("http://localhost:8000/cafes/api/reservations/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        
+        // APIレスポンスから予約データを整形
+        if (response?.data) {
+          const formattedReservations = response.data
+            .filter(reservation => reservation.is_active)
+            .map(formatReservation)
+          
+          setReservations(formattedReservations)
+        } else {
+          setError("予約データの形式が不正です。")
+        }
+      } catch (err) {
+        console.error("Error fetching reservations:", err)
+        setError("予約情報の取得に失敗しました。")
+      }
+    }
+
+    fetchReservations()
+  }, [])
 
   // 基本のナビゲーションアイテム
   const navItems = [
@@ -38,7 +81,7 @@ const BottomNavigation = ({ reservations = mockReservations }) => {
     { path: "/freetime", icon: Hourglass, label: "" },
   ]
 
-  // 予約メニューアイテムを作成
+  // 予約メニューアイテム
   const reservationItem = {
     path: "#",
     icon: Shrink,
@@ -48,13 +91,11 @@ const BottomNavigation = ({ reservations = mockReservations }) => {
 
   return (
     <>
-      {/* メインコンテンツ部分に余白を追加 */}
-      <div className="pt-4 pb-16">{/* ここにメインコンテンツを挿入 */}</div>
+      <div className="pt-4 pb-16" />
 
-      {/* ボトムナビゲーションバー */}
       <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-10">
         <div className="flex justify-around items-center h-16">
-          {navItems.map(({ path, icon: Icon, label }, index) => (
+          {navItems.map(({ path, icon: Icon, label }) => (
             <Link
               key={path}
               href={path}
@@ -80,27 +121,33 @@ const BottomNavigation = ({ reservations = mockReservations }) => {
         </div>
       </nav>
 
-      {/* 予約メニュー */}
       {isReservationMenuOpen && (
         <div className="fixed bottom-16 left-0 right-0 bg-background border-t border-border z-20 p-4 max-h-[60vh] overflow-y-auto">
           <h3 className="text-lg font-semibold mb-4">予約一覧</h3>
-          {reservations.map((reservation) => (
-            <Link
-              key={reservation.id}
-              href={`/reservation/${reservation.id}`}
-              className="block py-3 px-4 hover:bg-accent rounded-md mb-3 transition-colors duration-200"
-            >
-              <div className="text-base font-medium mb-1">{reservation.cafeName}</div>
-              <div className="text-sm text-muted-foreground flex justify-between items-center">
-                <span>
-                  {formatDate(reservation.date)}
-                  <span className="mx-2"> </span>
-                  {reservation.timeSlot}
-                </span>
-                <span className="text-primary">予約人数 {reservation.numberOfPeople}人</span>
-              </div>
-            </Link>
-          ))}
+          {error ? (
+            <p className="text-destructive">{error}</p>
+          ) : (
+            reservations.map((reservation) => (
+              <Link
+                key={reservation.id}
+                href={`/reservation/${reservation.id}`}
+                className="block py-3 px-4 hover:bg-accent rounded-md mb-3 transition-colors duration-200"
+              >
+                <div className="text-base font-medium mb-1">{reservation.cafeName}</div>
+                <div className="text-sm text-muted-foreground flex justify-between items-center">
+                  <span>
+                    {formatDate(reservation.date)}
+                    <span className="mx-2"> </span>
+                    {reservation.timeSlot}
+                  </span>
+                  <span className="text-primary">予約人数 {reservation.numberOfPeople}人</span>
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  参加者: {reservation.participants.map(p => p.user).join(", ")}
+                </div>
+              </Link>
+            ))
+          )}
         </div>
       )}
     </>

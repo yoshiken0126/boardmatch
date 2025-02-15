@@ -7,8 +7,8 @@ from django.http import HttpResponse
 from mip import Model,maximize,xsum
 import numpy as np
 import datetime,random
-from .models import CafeTable
-from .serializers import CafeTableSerializer,BoardGameCafeSerializer
+from .models import CafeTable,Message
+from .serializers import CafeTableSerializer,BoardGameCafeSerializer,MessageSerializer
 from accounts.serializers import StaffUserSerializer
 from accounts.permissions import IsStaffUser
 from rest_framework import viewsets
@@ -100,6 +100,51 @@ class ReservationViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+class MessageViewSet(viewsets.ModelViewSet):
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer
+
+    def get_queryset(self):
+        """
+        リクエストパラメータに基づいて、特定の予約に関連するメッセージのみを取得
+        """
+        queryset = super().get_queryset()
+
+        # reservation_id がリクエストに含まれている場合
+        reservation_id = self.request.query_params.get('reservation_id', None)
+
+        if reservation_id:
+            # reservation_id が指定されている場合、関連するメッセージをフィルタリング
+            queryset = queryset.filter(reservation__id=reservation_id)
+
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        """
+        新しいメッセージを作成する処理
+        """
+        reservation_id = request.data.get('reservation')
+        content = request.data.get('content')
+
+        if not reservation_id or not content:
+            return Response({"detail": "reservation and content are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # reservation_idが存在する予約を取得
+        try:
+            reservation = Reservation.objects.get(id=reservation_id)
+        except Reservation.DoesNotExist:
+            return Response({"detail": "Reservation not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # メッセージの作成
+        message = Message.objects.create(
+            reservation=reservation,
+            content=content,
+            sender=request.user,  # 送信者は現在の認証ユーザー
+        )
+
+        # 作成したメッセージをシリアライズしてレスポンスを返す
+        serializer = self.get_serializer(message)
+        return Response(serializer.data)
 
 
 

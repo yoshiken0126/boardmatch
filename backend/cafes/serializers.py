@@ -24,7 +24,7 @@ from django.utils import timezone
 from .models import Reservation, TableTimeSlot, ReservationTimeSlot, Participant
 
 from rest_framework import serializers
-from cafes.models import Reservation, TableTimeSlot
+from cafes.models import Reservation, TableTimeSlot,Message
 
 
 class ParticipantSerializer(serializers.ModelSerializer):
@@ -80,6 +80,25 @@ class ReservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reservation
         fields = ['id', 'cafe', 'cafe_name', 'table', 'count', 'reserved_at', 'reservation_type', 'start_time', 'end_time', 'participants', 'is_active']
+    
+
+class MessageSerializer(serializers.ModelSerializer):
+    reservation = serializers.StringRelatedField()  # 予約の情報（文字列表示）
+    sender = serializers.StringRelatedField()  # メッセージ送信者
+    content = serializers.CharField()  # メッセージ内容
+    sent_at = serializers.DateTimeField()  # メッセージ送信日時
+    is_user_sender = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Message
+        fields = ['reservation', 'sender','content', 'sent_at','is_user_sender']
+
+    def get_is_user_sender(self, obj):
+        """
+        ログイン中のユーザーがメッセージ送信者かを判定する
+        """
+        user = self.context.get('request').user  # request.userでログインユーザーを取得
+        return obj.sender == user  # メッセージの送信者がログインユーザーかどうかを確認
 
 
 

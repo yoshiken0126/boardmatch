@@ -25,7 +25,7 @@ const formatTimeSlot = (startTime, endTime) => {
 const formatReservation = (reservation) => {
   return {
     id: reservation.id,
-    cafeName: ` ${reservation.cafe_name}`, // カフェ名はAPIから取得する必要があります
+    cafeName: ` ${reservation.cafe_name}`,
     date: reservation.start_time,
     timeSlot: formatTimeSlot(reservation.start_time, reservation.end_time),
     numberOfPeople: reservation.count,
@@ -73,6 +73,40 @@ const BottomNavigation = () => {
     fetchReservations()
   }, [])
 
+  // メニューを閉じるための関数
+  const closeMenu = () => {
+    setIsReservationMenuOpen(false)
+  }
+
+  // クリックイベントのハンドラーを設定
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // メニューボタンのクリックは無視
+      if (event.target.closest('button[data-reservation-button]')) {
+        return
+      }
+      
+      // メニュー以外の場所をクリックした場合、メニューを閉じる
+      if (!event.target.closest('[data-reservation-menu]')) {
+        closeMenu()
+      }
+    }
+
+    if (isReservationMenuOpen) {
+      document.addEventListener('click', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [isReservationMenuOpen])
+
+  const handleLinkClick = () => {
+    if (isReservationMenuOpen) {
+      setIsReservationMenuOpen(false)
+    }
+  }
+
   // 基本のナビゲーションアイテム
   const navItems = [
     { path: "/boardgame", icon: Hexagon, label: "" },
@@ -86,7 +120,10 @@ const BottomNavigation = () => {
     path: "#",
     icon: Shrink,
     label: "",
-    onClick: () => setIsReservationMenuOpen(!isReservationMenuOpen),
+    onClick: (e) => {
+      e.stopPropagation() // イベントの伝播を停止
+      setIsReservationMenuOpen(!isReservationMenuOpen)
+    },
   }
 
   return (
@@ -99,6 +136,7 @@ const BottomNavigation = () => {
             <Link
               key={path}
               href={path}
+              onClick={handleLinkClick}
               className={`flex flex-col items-center justify-center w-full h-full ${
                 activeTab === path ? "text-primary" : "text-muted-foreground"
               } hover:text-primary transition-colors duration-200`}
@@ -109,6 +147,7 @@ const BottomNavigation = () => {
           ))}
           {reservations.length > 0 && (
             <button
+              data-reservation-button
               onClick={reservationItem.onClick}
               className={`flex flex-col items-center justify-center w-full h-full ${
                 isReservationMenuOpen ? "text-primary" : "text-muted-foreground"
@@ -122,7 +161,10 @@ const BottomNavigation = () => {
       </nav>
 
       {isReservationMenuOpen && (
-        <div className="fixed bottom-16 left-0 right-0 bg-background border-t border-border z-20 p-4 max-h-[60vh] overflow-y-auto">
+        <div 
+          data-reservation-menu
+          className="fixed bottom-16 left-0 right-0 bg-background border-t border-border z-20 p-4 max-h-[60vh] overflow-y-auto"
+        >
           <h3 className="text-lg font-semibold mb-4">予約一覧</h3>
           {error ? (
             <p className="text-destructive">{error}</p>
@@ -131,6 +173,7 @@ const BottomNavigation = () => {
               <Link
                 key={reservation.id}
                 href={`/reservation/${reservation.id}`}
+                onClick={handleLinkClick}
                 className="block py-3 px-4 hover:bg-accent rounded-md mb-3 transition-colors duration-200"
               >
                 <div className="text-base font-medium mb-1">{reservation.cafeName}</div>

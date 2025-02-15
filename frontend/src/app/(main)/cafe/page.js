@@ -177,6 +177,9 @@ export default function Home() {
       setReservationEndTime("");
       setNumberOfPeople(2);
       setError("");
+
+      window.location.reload()
+
     } catch (error) {
       console.error("予約の送信中にエラーが発生しました:", error);
       setError("予約の送信中にエラーが発生しました");

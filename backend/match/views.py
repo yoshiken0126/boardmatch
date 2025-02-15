@@ -794,7 +794,7 @@ def try_optimize(request):
                 user = CustomUser.objects.get(username=userdict[user_index])
                 participant = Participant.objects.create(reservation=reservation,user=user)
 
-            cafe = BoardGameCafe.objects.get(name=cafedict[result_user_cafe_dict[group[0]]])
+            '''cafe = BoardGameCafe.objects.get(name=cafedict[result_user_cafe_dict[group[0]]])
             day = daydict[result_user_day_dict[group[0]]]
             matchday = MatchDay.objects.create(day=day,cafe=cafe)
 
@@ -815,7 +815,7 @@ def try_optimize(request):
 
             game_choice = (choice_game_want_toplay & choice_game_can_instruct & cafegame).distinct()
             for game in game_choice:
-                matchday_choice = GameChoice.objects.create(matchday=matchday,game=game)
+                matchday_choice = GameChoice.objects.create(matchday=matchday,game=game)'''
 
 
 

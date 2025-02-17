@@ -49,34 +49,58 @@ class CafeTable(models.Model):
         created_at = self.created_at if hasattr(self, 'created_at') else timezone.now()
 
         # その週の月曜日を計算
-        start_of_week = created_at - timedelta(days=created_at.weekday())  # Monday of the week
+        start_of_week = created_at - timedelta(days=created_at.weekday())
 
-        # カフェの営業時間を取得
-        opening_time = self.cafe.opening_time  # 営業開始時間
-        closing_time = self.cafe.closing_time  # 営業終了時間
+        # デフォルトの営業時間を取得
+        default_opening = self.cafe.opening_time
+        default_closing = self.cafe.closing_time
+
+        # 曜日の対応表
+        weekday_names = {
+            0: 'monday',
+            1: 'tuesday',
+            2: 'wednesday',
+            3: 'thursday',
+            4: 'friday',
+            5: 'saturday',
+            6: 'sunday'
+        }
 
         # 1週間ごとのタイムスロットを4週間分作成
-        for week_offset in range(4):  # 4週間分
-        # 各曜日（月曜日から日曜日）のタイムスロットを作成
-            for day_offset in range(7):  # 月曜日から日曜日
-                day_start = start_of_week + timedelta(weeks=week_offset, days=day_offset)  # 各曜日の日付
-                current_time = timezone.make_aware(datetime.combine(day_start, opening_time))
-                end_time = timezone.make_aware(datetime.combine(day_start, closing_time))
+        for week_offset in range(4):
+            for day_offset in range(7):
+                day_start = start_of_week + timedelta(weeks=week_offset, days=day_offset)
+                weekday_name = weekday_names[day_start.weekday()]
+                
+                # その曜日の営業時間を取得
+                day_opening = getattr(self.cafe, f"{weekday_name}_open")
+                day_closing = getattr(self.cafe, f"{weekday_name}_close")
 
-            # 営業時間内に30分ごとにタイムスロットを作成
+                # デフォルトの時間帯でタイムスロットを作成
+                current_time = timezone.make_aware(datetime.combine(day_start, default_opening))
+                end_time = timezone.make_aware(datetime.combine(day_start, default_closing))
+
                 while current_time < end_time:
                     next_time = current_time + timedelta(minutes=60)
-                
-                    # timeslot_range を作成して保存
-                    timeslot_range = (current_time, next_time)
-                
-                # 新しいタイムスロットを作成
+                    if next_time > end_time:
+                        next_time = end_time
+
+                    # タイムスロットが営業時間内かどうかを判定
+                    is_closed = True  # デフォルトは閉店状態
+
+                    if day_opening is not None and day_closing is not None:
+                        # 営業日の場合、時間帯をチェック
+                        slot_time = current_time.time()
+                        if day_opening <= slot_time < day_closing:
+                            is_closed = False
+
+                    # タイムスロットを作成
                     TableTimeSlot.objects.create(
                         table=self,
-                        timeslot_range=timeslot_range,  # DateTimeRangeFieldを使用
+                        timeslot_range=(current_time, next_time),
+                        is_closed=is_closed
                     )
-                
-                # 30分進める
+                    
                     current_time = next_time
 
 

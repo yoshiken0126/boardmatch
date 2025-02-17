@@ -73,6 +73,46 @@ class ReservationSerializer(serializers.ModelSerializer):
         fields = ['cafe', 'table', 'timeslot', 'participant', 'date', 'course', 'startTime', 'endTime', 'numberOfPeople']
 
 
+    def get_available_table_ids_for_slot(self, cafe_id, start_time, end_time, count):
+        # 指定されたカフェIDに関連するテーブルを取得
+        cafe_tables = CafeTable.objects.filter(cafe_id=cafe_id)
+        
+        # 指定された時間帯に重なる TableTimeSlot を取得
+        timeslots = TableTimeSlot.objects.filter(
+            timeslot_range__overlap=(start_time, end_time)
+        )
+        
+        available_tables = []
+        for table in cafe_tables:
+            table_timeslots = timeslots.filter(table=table)
+            all_available = True
+            for slot in table_timeslots:
+                if slot.is_reserved or slot.is_closed:
+                    all_available = False
+                    break
+            if all_available:
+                available_tables.append(table)
+        
+        # 予約人数に対応するため、必要なテーブルを返す
+        available_tables_for_reservation = []
+        remaining_count = count
+        for table in available_tables:
+            if remaining_count <= 0:
+                break
+            if table.capacity <= remaining_count:
+                available_tables_for_reservation.append(table)
+                remaining_count -= table.capacity
+            else:
+                available_tables_for_reservation.append(table)
+                remaining_count = 0
+        
+        if remaining_count > 0:
+            # まだ人数が足りていない場合は空きテーブルが足りない
+            return []
+            
+        return available_tables_for_reservation
+
+
     def create(self, validated_data):
         cafe = validated_data['cafe']
         count = validated_data['numberOfPeople']
@@ -83,75 +123,62 @@ class ReservationSerializer(serializers.ModelSerializer):
         course = validated_data.get('course')
         start_time = validated_data.get('startTime')
         end_time = validated_data.get('endTime')
-
-        start_time = datetime.strptime(f"{date} {start_time}", '%Y-%m-%d %H:%M:%S')
-        end_time = datetime.strptime(f"{date} {end_time}", '%Y-%m-%d %H:%M:%S')
-
+        
+        start_time = datetime.strptime(
+            f"{date} {start_time}",
+            '%Y-%m-%d %H:%M:%S'
+        )
+        end_time = datetime.strptime(
+            f"{date} {end_time}",
+            '%Y-%m-%d %H:%M:%S'
+        )
+        
         start_time = timezone.make_aware(start_time)
         end_time = timezone.make_aware(end_time)
-
-        available_table_ids = self.get_available_table_ids_for_slot(cafe, start_time, end_time)
-
-        if not available_table_ids:
-            raise serializers.ValidationError('空いているテーブルが見つかりません')
-
-        available_table = CafeTable.objects.get(id=available_table_ids[0])
-
-        user = self.context['request'].user  # 現在のユーザーを取得
-        if user.user_type == 'staff_user':
-            reservation_type = 'staff'
-        else:
-            reservation_type = 'user'
         
-        print(user)
-
-
-
+        available_tables = self.get_available_table_ids_for_slot(
+            cafe,
+            start_time,
+            end_time,
+            count
+        )
+        
+        if not available_tables:
+            raise serializers.ValidationError('空いているテーブルが見つかりません')
+        
+        # ユーザー情報の取得
+        user = self.context['request'].user
+        reservation_type = 'staff' if user.user_type == 'staff_user' else 'user'
+        
+        # 予約の作成
         reservation = Reservation.objects.create(
             cafe=cafe,
             count=validated_data['numberOfPeople'],
             reserved_at=timezone.now(),
-            reservation_type=reservation_type  # 予約タイプを変更可能
+            reservation_type=reservation_type
         )
-        timeslots = TableTimeSlot.objects.filter(table=available_table,timeslot_range__overlap=(start_time, end_time))
-        timeslots.update(is_reserved=True)
-        for timeslot in timeslots:
-            reservation_timeslot = ReservationTimeSlot.objects.create(reservation=reservation,timeslot=timeslot)
         
+        # 複数のテーブルに対して予約を行う
+        for table in available_tables:
+            # 対応する時間帯を更新
+            timeslots = TableTimeSlot.objects.filter(
+                table=table,
+                timeslot_range__overlap=(start_time, end_time)
+            )
+            timeslots.update(is_reserved=True)
+            
+            for timeslot in timeslots:
+                ReservationTimeSlot.objects.create(
+                    reservation=reservation,
+                    timeslot=timeslot
+                )
+        
+        # 参加者の登録（必要に応じて）
         if user.user_type == 'custom_user':
             user = CustomUser.objects.get(id=user.id)
-            participant = Participant.objects.create(reservation=reservation,user=user)
-
+            participant = Participant.objects.create(
+                reservation=reservation,
+                user=user
+            )
         
-        
-
         return reservation
-
-
-
-    def get_available_table_ids_for_slot(self,cafe_id, start_time, end_time):
-        # 指定されたカフェIDに関連するテーブルを取得
-        cafe_tables = CafeTable.objects.filter(cafe_id=cafe_id)
-
-        # 指定された時間帯に重なる TableTimeSlot を取得
-        timeslots = TableTimeSlot.objects.filter(timeslot_range__overlap=(start_time, end_time))
-
-        available_table_ids = []
-
-        # テーブルごとにフィルタリング
-        for table in cafe_tables:
-            # このテーブルに関連する timeslot を取得
-            table_timeslots = timeslots.filter(table=table)
-
-            # そのテーブルに関連するすべての時間帯が「予約されていない」かを確認
-            all_available = True
-            for slot in table_timeslots:
-                if slot.is_reserved or slot.is_closed:
-                    all_available = False
-                    break
-        
-            # すべての時間帯が予約されていない場合、そのテーブルIDをリストに追加
-            if all_available:
-                available_table_ids.append(table.id)
-    
-        return available_table_ids

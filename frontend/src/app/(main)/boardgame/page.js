@@ -1,73 +1,62 @@
-'use client'
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Card, CardContent, CardHeader, CardTitle,CardDescription,CardFooter } from "@/components/ui/card"
+"use client"
+import { useState, useEffect } from "react"
+import axios from "axios"
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import Navbar from '@/components/navbar'
-import { useAuth } from '../../context/AuthContext';
-import { getToken } from '@/lib/auth';
+import { getToken } from "@/lib/auth"
+import Image from "next/image"
 
 export default function Home() {
-  const[boardgames,setBoardgames] = useState([]);
-  const [userBoardGames, setUserBoardGames] = useState([]);
-  const token = getToken();
-  const [switchStates, setSwitchStates] = useState({});
-  
+  const [boardgames, setBoardgames] = useState([])
+  const [userBoardGames, setUserBoardGames] = useState([])
+  const [switchStates, setSwitchStates] = useState({})
+  const [error, setError] = useState(null)
+  const token = getToken()
+
   useEffect(() => {
-   
-    axios.get('http://localhost:8000/match/api/boardgame_list/')
-      .then(response => {
-        setBoardgames(response.data);
-        console.log(response.data);
-      })
-      .catch(error => {
-        console.error("エラー発生", error);
-      });
+    const fetchData = async () => {
+      try {
+        const [boardgamesResponse, userGamesResponse] = await Promise.all([
+          axios.get("http://localhost:8000/match/api/boardgames/"),
+          axios.get("http://localhost:8000/match/api/user_game_relations/", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        ])
 
+        setBoardgames(boardgamesResponse.data)
+        setUserBoardGames(userGamesResponse.data)
 
-     // ユーザーが持っているボードゲームを取得する（仮にユーザーIDが必要ならその情報を使用）
-     axios.get('http://localhost:8000/match/api/user_game_relations/', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-    .then(response => {
-      setUserBoardGames(response.data);
-      const usergames = response.data;
-      console.log(usergames);
+        const initialSwitchStates = userGamesResponse.data.reduce((acc, game) => {
+          acc[game.game] = game.want_to_play
+          return acc
+        }, {})
 
-      // ユーザーのボードゲーム情報を元にスイッチ状態を初期化
-      const initialSwitchStates = usergames.reduce((acc, game) => {
-        acc[game.game] = game.want_to_play; // `want_to_play` をスイッチ状態として設定
-        return acc;
-      }, {});
+        setSwitchStates(initialSwitchStates)
+      } catch (error) {
+        setError(error.message)
+        console.error("データ取得エラー:", error)
+      }
+    }
 
-      setSwitchStates(initialSwitchStates);
-      console.log(usergames);
-    })
-    .catch(error => {
-      console.error("ユーザーのボードゲーム情報取得エラー", error);
-    });
-     
-  },[]);
+    fetchData()
+  }, [token])
 
-   // スイッチの状態が変更されたときに呼ばれる関数
-   const handleSwitchChange = async (gameId, checked) => {
+  const handleSwitchChange = async (gameId, checked) => {
     try {
       if (checked) {
-        // スイッチがオンになった場合：データを作成
         const response = await axios.post(
-          'http://localhost:8000/match/api/user_game_relations/',
+          "http://localhost:8000/match/api/user_game_relations/",
           { game: gameId, want_to_play: true },
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
-        );
-        console.log('データが作成されました:', response.data);
+        )
+        setSwitchStates(prev => ({ ...prev, [gameId]: true }))
       } else {
-        
         const relationsResponse = await axios.get(
           `http://localhost:8000/match/api/user_game_relations/?game_id=${gameId}`,
           {
@@ -75,85 +64,79 @@ export default function Home() {
               Authorization: `Bearer ${token}`,
             },
           }
-        );
-        
-        console.log(`ゲームID: ${gameId} に関連するリレーションデータ:`, relationsResponse.data);
-  
-        // ユーザーゲームリレーションが見つかった場合
-        if (relationsResponse.data.length > 0) {
-          // 関連するリレーションのIDを取得
-          const relationToDelete = relationsResponse.data.find(relation => relation.game === gameId);
-  
-          if (relationToDelete) {
-            console.log(`削除対象のリレーションID: ${relationToDelete.id}`);
-            
-            // 削除リクエスト
-            const deleteResponse = await axios.delete(
-              `http://localhost:8000/match/api/user_game_relations/${relationToDelete.id}/`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-            
-            // 削除後のレスポンスを確認
-            console.log('データが削除されました:', deleteResponse.data);
-          } else {
-            console.log('関連するユーザーゲームリレーションが見つかりません');
-          }
-        } else {
-          console.log('ゲームIDに関連するリレーションが存在しません');
+        )
+
+        const relationToDelete = relationsResponse.data.find(
+          (relation) => relation.game === gameId
+        )
+
+        if (relationToDelete) {
+          await axios.delete(
+            `http://localhost:8000/match/api/user_game_relations/${relationToDelete.id}/`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          )
+          setSwitchStates(prev => ({ ...prev, [gameId]: false }))
         }
       }
-      // スイッチの状態を更新
-      setSwitchStates(prev => ({
-        ...prev,
-        [gameId]: checked,
-      }));
     } catch (error) {
-      console.error('エラーが発生しました:', error);
-      // エラーが発生した場合は、スイッチを元の状態に戻す
-      setSwitchStates(prev => ({
-        ...prev,
-        [gameId]: !checked,
-      }));
+      console.error("スイッチ操作エラー:", error)
+      setSwitchStates(prev => ({ ...prev, [gameId]: !checked }))
     }
-  };
+  }
 
-  const handleOn = () => {
-    console.log('スイッチはオンです');
-  };
+  if (error) {
+    return <div className="container mx-auto py-8 text-center">エラーが発生しました: {error}</div>
+  }
 
-  // オフの場合に呼ばれる関数
-  const handleOff = () => {
-    console.log('スイッチはオフです');
-  };
-
-
-  return(
-    <div>
-     
-      {boardgames.length === 0 ?(
-        <p>ボードゲームは登録されていません</p>
+  return (
+    <div className="container mx-auto py-8">
+      {boardgames.length === 0 ? (
+        <p className="text-center text-lg">ボードゲームは登録されていません</p>
       ) : (
-        <ul>
-          {boardgames.map(boardgame => (
-            <Card key={boardgame.id} className="relative">
-              <CardHeader className='text-2xl font-bold rounded'>{boardgame.name}</CardHeader>
-              <CardContent>こちらに詳細情報が記載されます。</CardContent>
-              <div className="absolute top-4 right-4">
-              <Switch    
-              checked={switchStates[boardgame.id] || false}  
-              onCheckedChange={(checked) => handleSwitchChange(boardgame.id, checked)}
-              />
+        <div className="grid grid-cols-1 gap-1">
+          {boardgames.map((boardgame) => (
+            <Card key={boardgame.id} className="relative flex flex-row items-start w-full rounded-md">
+              <div className="w-20 h-20 relative flex-shrink-0 m-4 bg-gray-200 rounded-md" />
+              <div className="flex-1 min-w-0 py-4 pr-4">
+                <CardHeader className="p-0">
+                  <CardTitle className="text-lg font-bold truncate">{boardgame.name}</CardTitle>
+                  <CardDescription className="text-sm space-y-0.5 mt-1">
+                    {boardgame.designers.length > 0 && (
+                      <p className="truncate">デザイナー: {boardgame.designers.join(", ")}</p>
+                    )}
+                    <p>
+                      プレイ人数: {boardgame.min_players}-{boardgame.max_players}人
+                    </p>
+                    <p>
+                      プレイ時間: {boardgame.min_playtime}-{boardgame.max_playtime}分
+                    </p>
+                  </CardDescription>
+                </CardHeader>
+                <CardFooter className="flex justify-end p-0 mt-2">
+                  {boardgame.game_categories.map((category, index) => (
+                    <span key={index} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full ml-1">
+                      {category}
+                    </span>
+                  ))}
+                </CardFooter>
               </div>
-              </Card>
+              <div className="absolute top-0 right-0 p-4">
+                <Switch
+                  checked={switchStates[boardgame.id] || false}
+                  onCheckedChange={(checked) => handleSwitchChange(boardgame.id, checked)}
+                />
+              </div>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
     </div>
-  );
-
-  
+  )
 }
+
+
+

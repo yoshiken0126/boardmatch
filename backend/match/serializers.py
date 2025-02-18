@@ -1,14 +1,27 @@
 from rest_framework import serializers
-from accounts.models import BoardGame,BoardGameCafe,CustomUser
+from accounts.models import BoardGame,BoardGameCafe,CustomUser,Designer, GameCategory, GameMechanic
 from match.models import UserGameRelation,UserFreeTime,UserCafeRelation,UserRelation
 from cafes.models import Reservation,TableTimeSlot,CafeTable,ReservationTimeSlot,Participant
 from django.utils import timezone
 from datetime import datetime
 
+
 class BoardGameSerializer(serializers.ModelSerializer):
+    # デザイナーをテキストリストとして取得
+    designers = serializers.StringRelatedField(many=True)
+    # ゲームカテゴリをテキストリストとして取得
+    game_categories = serializers.StringRelatedField(many=True)
+    # ゲームメカニクスをテキストリストとして取得
+    game_mechanics = serializers.StringRelatedField(many=True)
+
     class Meta:
         model = BoardGame
-        fields = ['id', 'name']
+        fields = [
+            'id', 'name', 'designers', 'min_playtime', 'max_playtime', 'min_players', 'max_players',
+            'short_description', 'long_description', 'game_categories', 'game_mechanics', 'box_image',
+            'board_image', 'created_at', 'updated_at'
+        ]
+
 
 class BoardGameCafeSerializer(serializers.ModelSerializer):
     class Meta:

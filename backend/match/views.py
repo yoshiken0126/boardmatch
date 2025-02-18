@@ -31,9 +31,10 @@ from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot
 
 
 # Create your views here.
-class BoardGameListCreate(generics.ListCreateAPIView):
+class BoardGameViewSet(viewsets.ModelViewSet):
     queryset = BoardGame.objects.all()
     serializer_class = BoardGameSerializer
+    
 
 class BoardGameCafeList(generics.ListCreateAPIView):
     queryset = BoardGameCafe.objects.all()

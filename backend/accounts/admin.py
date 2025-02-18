@@ -1,4 +1,4 @@
-from accounts.models import CustomUser, BoardGame, BoardGameCafe, CafeStaff
+from accounts.models import CustomUser, BoardGame, BoardGameCafe, CafeStaff,Designer, GameCategory, GameMechanic
 from django.contrib import admin
 
 # Register your models here.
@@ -40,9 +40,34 @@ class BoardGameCafeAdmin(admin.ModelAdmin):
         return obj.get_opening_hours('sunday')
     sunday_hours.short_description = 'Sunday'
 
+class DesignerAdmin(admin.ModelAdmin):
+    list_display = ('name',)  # 一覧表示するフィールド
+    search_fields = ('name',)  # 検索可能なフィールド
+
+# GameCategory モデルの管理
+class GameCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name',)  # 一覧表示するフィールド
+    search_fields = ('name',)  # 検索可能なフィールド
+
+# GameMechanic モデルの管理
+class GameMechanicAdmin(admin.ModelAdmin):
+    list_display = ('name',)  # 一覧表示するフィールド
+    search_fields = ('name',)  # 検索可能なフィールド
+
+# BoardGame モデルの管理
+class BoardGameAdmin(admin.ModelAdmin):
+    list_display = ('name', 'min_players', 'max_players', 'min_playtime', 'max_playtime')  # 一覧表示するフィールド
+    search_fields = ('name', 'description')  # 検索可能なフィールド
+    list_filter = ('game_categories', 'game_mechanics', 'designers')  # フィルタリングできるフィールド
+    filter_horizontal = ('game_categories', 'game_mechanics', 'designers')  # ManyToMany フィールドの選択を横並びに
+    list_per_page = 20  # 1ページに表示する項目数
 
 
+# モデルを管理画面に登録
+admin.site.register(Designer, DesignerAdmin)
+admin.site.register(GameCategory, GameCategoryAdmin)
+admin.site.register(GameMechanic, GameMechanicAdmin)
+admin.site.register(BoardGame, BoardGameAdmin)
 admin.site.register(BoardGameCafe, BoardGameCafeAdmin)
-admin.site.register(BoardGame)
 admin.site.register(CustomUser,CustomUserAdmin)
 admin.site.register(CafeStaff,CafeStaffAdmin)

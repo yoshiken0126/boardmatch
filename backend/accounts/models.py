@@ -88,11 +88,44 @@ class BoardGameCafe(models.Model):
             return f"{opening_field} - {closing_field}"
         return "Closed"
 
-class BoardGame(models.Model):
-    name = models.CharField(max_length=15)
+
+
+class Designer(models.Model):
+    name = models.CharField(max_length=100)
+    
     def __str__(self):
         return self.name
 
+class GameCategory(models.Model):
+    name = models.CharField(max_length=50)
+    
+    def __str__(self):
+        return self.name
+
+class GameMechanic(models.Model):
+    name = models.CharField(max_length=100)
+    
+    def __str__(self):
+        return self.name
+
+class BoardGame(models.Model):
+    name = models.CharField(max_length=100)
+    designers = models.ManyToManyField(Designer, related_name='boardgames',blank=True)  # 複数のデザイナー
+    min_playtime = models.IntegerField(help_text="最短プレイ時間 (分)", blank=True, null=True)  # 最短プレイ時間（分）
+    max_playtime = models.IntegerField(help_text="最長プレイ時間 (分)", blank=True, null=True)  # 最長プレイ時間（分）
+    min_players = models.IntegerField(help_text="最小人数", default=2)  # 最小プレイ人数
+    max_players = models.IntegerField(help_text="最大人数", default=4)  # 最大プレイ人数
+    short_description = models.CharField(max_length=255, blank=True, null=True)  # 簡単な紹介文
+    long_description = models.TextField(blank=True, null=True)  # 詳細な紹介文
+    game_categories = models.ManyToManyField(GameCategory, related_name='boardgames',blank=True)  # ゲームの分類（軽量級、中量級、重量級）
+    game_mechanics = models.ManyToManyField(GameMechanic, related_name='boardgames',blank=True)  # ゲームメカニクス（例: ワーカープレイスメント、ダイスロールなど）
+    box_image = models.ImageField(upload_to='boardgame_images/box/', blank=True, null=True)  # 箱絵の画像
+    board_image = models.ImageField(upload_to='boardgame_images/board/', blank=True, null=True)  # ボード盤面の画像
+    created_at = models.DateTimeField(auto_now_add=True)  # 作成日時
+    updated_at = models.DateTimeField(auto_now=True)  # 更新日時
+
+    def __str__(self):
+        return self.name
 
 @receiver(post_save, sender=CustomUser)
 def create_user_relations(sender, instance, created, **kwargs):

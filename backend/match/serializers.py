@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from accounts.models import BoardGame,BoardGameCafe,CustomUser,Designer, GameCategory, GameMechanic
+from accounts.models import BoardGame,BoardGameCafe,CustomUser,Designer, GameClass, GameTag
 from match.models import UserGameRelation,UserFreeTime,UserCafeRelation,UserRelation
 from cafes.models import Reservation,TableTimeSlot,CafeTable,ReservationTimeSlot,Participant
 from django.utils import timezone
@@ -10,28 +10,39 @@ class BoardGameSerializer(serializers.ModelSerializer):
     # デザイナーをテキストリストとして取得
     designers = serializers.StringRelatedField(many=True)
     # ゲームカテゴリをテキストリストとして取得
-    game_categories = serializers.StringRelatedField(many=True)
+    game_class = serializers.StringRelatedField(many=True)
     # ゲームメカニクスをテキストリストとして取得
-    game_mechanics = serializers.StringRelatedField(many=True)
+    game_tags = serializers.StringRelatedField(many=True)
 
     class Meta:
         model = BoardGame
         fields = [
             'id', 'name', 'designers', 'min_playtime', 'max_playtime', 'min_players', 'max_players',
-            'short_description', 'long_description', 'game_categories', 'game_mechanics', 'box_image',
+            'short_description', 'long_description', 'game_class', 'game_tags', 'box_image',
             'board_image', 'created_at', 'updated_at'
         ]
 
 
 class BoardGameCafeSerializer(serializers.ModelSerializer):
+    prefecture_name = serializers.CharField(source='prefecture.name', read_only=True)
     class Meta:
         model = BoardGameCafe
-        fields = ['id', 'name']
+        fields = [
+            'id', 'name', 'opening_time', 'closing_time',
+            'monday_open', 'monday_close', 'tuesday_open', 'tuesday_close',
+            'wednesday_open', 'wednesday_close', 'thursday_open', 'thursday_close',
+            'friday_open', 'friday_close', 'saturday_open', 'saturday_close',
+            'sunday_open', 'sunday_close', 'postal_code', 'prefecture_name', 'city', 
+            'address', 'building', 'walking_minutes', 'image1', 'image2'
+        ]
+
 
 class CustomUserSerializer(serializers.ModelSerializer):
+    game_class = serializers.StringRelatedField(many=True)
+    profile_picture = serializers.ImageField()
     class Meta:
         model = CustomUser
-        fields = ['id', 'username']  # 必要なフィールドを指定
+        fields = ['id', 'username','game_class','profile_picture']  # 必要なフィールドを指定
 
 
 

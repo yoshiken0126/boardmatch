@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import axios from "axios"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -37,6 +37,7 @@ export default function Home() {
       .get("http://localhost:8000/match/api/cafe_list/")
       .then((response) => {
         setCafes(response.data)
+        console.log(response)
       })
       .catch((error) => {
         console.error("カフェリストの取得中にエラーが発生しました:", error)
@@ -124,27 +125,24 @@ export default function Home() {
   const handleReservationSubmit = async () => {
     setError("")
 
-    // 日付の検証
     if (!reservationDate) {
       setError("日付を選択してください")
       return
     }
 
-    // コース選択の検証
     if (!selectedCourse) {
       setError("コースを選択してください")
       return
     }
 
-    // カスタムコースの時間検証
     if (selectedCourse === "custom") {
       if (!reservationStartTime || !reservationEndTime) {
         setError("開始時間と終了時間を選択してください")
         return
       }
 
-      const startHour = parseInt(reservationStartTime.split(":")[0])
-      const endHour = parseInt(reservationEndTime.split(":")[0])
+      const startHour = Number.parseInt(reservationStartTime.split(":")[0])
+      const endHour = Number.parseInt(reservationEndTime.split(":")[0])
 
       if (startHour >= endHour) {
         setError("終了時間は開始時間より後に設定してください")
@@ -160,35 +158,34 @@ export default function Home() {
       endTime: reservationEndTime,
       numberOfPeople: numberOfPeople,
     }
-  
+
     try {
       const response = await axios.post("http://localhost:8000/match/api/reservations/", reservationData, {
         headers: {
           Authorization: `Bearer ${token}`,
-        }
-      });
-  
-      console.log("予約が確定しました:", response.data);
-      
-      setIsModalOpen(false);
-      setReservationDate(null);
-      setSelectedCourse("");
-      setReservationStartTime("");
-      setReservationEndTime("");
-      setNumberOfPeople(2);
-      setError("");
+        },
+      })
+
+      console.log("予約が確定しました:", response.data)
+
+      setIsModalOpen(false)
+      setReservationDate(null)
+      setSelectedCourse("")
+      setReservationStartTime("")
+      setReservationEndTime("")
+      setNumberOfPeople(2)
+      setError("")
 
       window.location.reload()
-
     } catch (error) {
-      console.error("予約の送信中にエラーが発生しました:", error);
-      setError("予約の送信中にエラーが発生しました");
+      console.error("予約の送信中にエラーが発生しました:", error)
+      setError("予約の送信中にエラーが発生しました")
     }
-  };
+  }
 
   const handleCourseChange = (course) => {
     setSelectedCourse(course)
-    setError("") // コース変更時にエラーをクリア
+    setError("")
     if (course === "afternoon") {
       setReservationStartTime("13:00")
       setReservationEndTime("18:00")
@@ -201,15 +198,13 @@ export default function Home() {
     }
   }
 
-  // カスタムコースの時間変更ハンドラ
   const handleStartTimeChange = (time) => {
     setReservationStartTime(time)
-    setError("") // エラーをクリア
+    setError("")
 
-    // 終了時間が設定済みの場合、時系列チェック
     if (reservationEndTime) {
-      const startHour = parseInt(time.split(":")[0])
-      const endHour = parseInt(reservationEndTime.split(":")[0])
+      const startHour = Number.parseInt(time.split(":")[0])
+      const endHour = Number.parseInt(reservationEndTime.split(":")[0])
       if (startHour >= endHour) {
         setError("終了時間は開始時間より後に設定してください")
       }
@@ -218,12 +213,11 @@ export default function Home() {
 
   const handleEndTimeChange = (time) => {
     setReservationEndTime(time)
-    setError("") // エラーをクリア
+    setError("")
 
-    // 開始時間が設定済みの場合、時系列チェック
     if (reservationStartTime) {
-      const startHour = parseInt(reservationStartTime.split(":")[0])
-      const endHour = parseInt(time.split(":")[0])
+      const startHour = Number.parseInt(reservationStartTime.split(":")[0])
+      const endHour = Number.parseInt(time.split(":")[0])
       if (startHour >= endHour) {
         setError("終了時間は開始時間より後に設定してください")
       }
@@ -235,6 +229,22 @@ export default function Home() {
     return `${hour}:00`
   })
 
+  // 定休日を取得する関数を追加
+  const getClosedDays = (cafe) => {
+    const days = ["月", "火", "水", "木", "金", "土", "日"]
+    const closedDays = []
+
+    if (cafe.monday_open === null) closedDays.push("月")
+    if (cafe.tuesday_open === null) closedDays.push("火")
+    if (cafe.wednesday_open === null) closedDays.push("水")
+    if (cafe.thursday_open === null) closedDays.push("木")
+    if (cafe.friday_open === null) closedDays.push("金")
+    if (cafe.saturday_open === null) closedDays.push("土")
+    if (cafe.sunday_open === null) closedDays.push("日")
+
+    return closedDays.length > 0 ? closedDays.join("、") : "なし"
+  }
+
   return (
     <div>
       {cafes.length === 0 ? (
@@ -243,27 +253,53 @@ export default function Home() {
         <ul>
           {cafes.map((cafe) => (
             <Card key={cafe.id} className="relative mb-4">
-              <CardHeader className="text-2xl font-bold rounded">
-                <div className="flex items-center">
-                  <Button
-                    onClick={() => handleReservationClick(cafe)}
-                    className="mr-2 text-sm bg-black text-white hover:bg-gray-800"
-                    size="sm"
-                  >
-                    予約
-                  </Button>
-                  <span>{cafe.name}</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p>{cafe.description || "このカフェの詳細情報はありません。"}</p>
-                <div className="absolute top-4 right-4">
-                  <Switch
-                    checked={switchStates[cafe.id] || false}
-                    onCheckedChange={(checked) => handleSwitchChange(cafe.id, checked)}
+              <div className="flex flex-col sm:flex-row">
+                <div className="w-full sm:w-1/4 p-2 flex items-center justify-center" style={{ height: "150px" }}>
+                  <div
+                    className="w-full h-full bg-gray-300"
+                    style={{
+                      backgroundImage: cafe.image1 ? `url(${cafe.image1})` : "none",
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }}
                   />
                 </div>
-              </CardContent>
+                <div className="w-full sm:w-3/4">
+                  <CardContent className="py-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center">
+                        <Button
+                          onClick={() => handleReservationClick(cafe)}
+                          className="mb-2 sm:mb-0 sm:mr-2 text-sm bg-black text-white hover:bg-gray-800"
+                          size="sm"
+                        >
+                          予約
+                        </Button>
+                        <span className="text-xl font-bold">{cafe.name}</span>
+                      </div>
+                    </div>
+                    <div className="absolute top-2 right-2 sm:top-6 sm:right-6">
+                      <Switch
+                        checked={switchStates[cafe.id] || false}
+                        onCheckedChange={(checked) => handleSwitchChange(cafe.id, checked)}
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center mb-2">
+                      <p className="mr-4">
+                        営業時間: {cafe.opening_time.slice(0, 5)}～{cafe.closing_time.slice(0, 5)}
+                      </p>
+                      <p>定休日: {getClosedDays(cafe)}</p>
+                    </div>
+                    <p>
+                      住所: {cafe.prefecture_name} {cafe.city}
+                    </p>
+                    <p className="ml-0 sm:ml-8">
+                      {cafe.address} {cafe.building}
+                    </p>
+                    <p>アクセス: {cafe.walking_minutes}</p>
+                  </CardContent>
+                </div>
+              </div>
             </Card>
           ))}
         </ul>
@@ -391,3 +427,4 @@ export default function Home() {
     </div>
   )
 }
+

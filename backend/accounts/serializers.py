@@ -3,6 +3,7 @@ from .models import CustomUser,CafeStaff
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class CustomUserSerializer(serializers.ModelSerializer): #追記　Userのシリアライザー
+    
     class Meta:
         model = CustomUser
         fields = ('id', 'username','password','is_optimize_active')

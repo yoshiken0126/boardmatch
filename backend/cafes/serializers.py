@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import CafeTable
-from accounts.models import BoardGameCafe
+from accounts.models import BoardGameCafe,CustomUser
 
 class CafeTableSerializer(serializers.ModelSerializer):
     class Meta:
@@ -87,11 +87,12 @@ class MessageSerializer(serializers.ModelSerializer):
     sender = serializers.StringRelatedField()  # メッセージ送信者
     content = serializers.CharField()  # メッセージ内容
     sent_at = serializers.DateTimeField()  # メッセージ送信日時
-    is_user_sender = serializers.SerializerMethodField()
+    is_user_sender = serializers.SerializerMethodField()  # ログイン中のユーザーが送信者かどうか判定
+    sender_profile_picture = serializers.SerializerMethodField()  # 送信者のプロフィール画像
 
     class Meta:
         model = Message
-        fields = ['reservation', 'sender','content', 'sent_at','is_user_sender']
+        fields = ['reservation', 'sender', 'content', 'sent_at', 'is_user_sender', 'sender_profile_picture']
 
     def get_is_user_sender(self, obj):
         """
@@ -99,6 +100,22 @@ class MessageSerializer(serializers.ModelSerializer):
         """
         user = self.context.get('request').user  # request.userでログインユーザーを取得
         return obj.sender == user  # メッセージの送信者がログインユーザーかどうかを確認
+
+    def get_sender_profile_picture(self, obj):
+        """
+        メッセージ送信者のプロフィール画像URLを取得する
+        BaseUser（親クラス）の場合はCustomUserにキャストしてアクセス
+        """
+        sender = obj.sender
+        customuser = CustomUser.objects.get(username=sender)
+    
+    # sender が BaseUser のインスタンスの場合、CustomUser にキャストして profile_picture を取得
+        if isinstance(customuser, CustomUser):
+            return customuser.profile_picture.url if customuser.profile_picture else None
+    
+        return None
+
+
 
 
 

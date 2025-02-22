@@ -170,3 +170,6 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), #アクセストークンの有効期限を60分に設定しています
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1), #リフレッシュトークンの有効期限を1日に設定しています
 }
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

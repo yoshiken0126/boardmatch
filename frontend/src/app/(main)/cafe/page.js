@@ -246,7 +246,7 @@ export default function Home() {
   }
 
   return (
-    <div>
+    <div className="max-w-4xl mx-auto">
       {cafes.length === 0 ? (
         <p>登録されているカフェはありません</p>
       ) : (

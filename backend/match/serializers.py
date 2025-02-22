@@ -76,7 +76,7 @@ class UserRelationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserRelation
-        fields = ['id', 'from_user', 'to_user', 'may_follow']
+        fields = ['id', 'from_user', 'to_user', 'may_follow','memo']
 
 
 class ReservationSerializer(serializers.ModelSerializer):

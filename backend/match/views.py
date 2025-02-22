@@ -380,7 +380,7 @@ def count_available_tables(cafe_id, start_time, end_time):
         # そのテーブルに関連するすべての時間帯が「予約されていない」かを確認
         all_available = True
         for slot in table_timeslots:
-            if slot.is_reserved:
+            if slot.is_reserved or slot.is_closed:
                 all_available = False
                 break
         
@@ -783,6 +783,7 @@ def try_optimize(request):
     for cafe in range(len(user_group_in_cafe)):
         for group in user_group_in_cafe[cafe]:
             available_table_list = get_available_table_ids_for_week(cafe_id_dict[result_user_cafe_dict[group[0]]])
+            print(available_table_list)
 
             cafe = BoardGameCafe.objects.get(id=cafe_id_dict[result_user_cafe_dict[group[0]]])
             table = CafeTable.objects.get(id=available_table_list[result_user_day_dict[group[0]]][0])
@@ -794,6 +795,26 @@ def try_optimize(request):
             for user_index in group:
                 user = CustomUser.objects.get(username=userdict[user_index])
                 participant = Participant.objects.create(reservation=reservation,user=user)
+
+            # グループ内の各ユーザーの組み合わせに対してUserRelationを作成
+            for i in range(len(group)):
+                for j in range(i + 1, len(group)):
+                    user1 = CustomUser.objects.get(username=userdict[group[i]])
+                    user2 = CustomUser.objects.get(username=userdict[group[j]])
+                
+                    # user1 → user2のリレーションをチェック
+                    if not UserRelation.objects.filter(from_user=user1, to_user=user2).exists():
+                        UserRelation.objects.create(
+                            from_user=user1,
+                            to_user=user2
+                        )
+                
+                    # user2 → user1のリレーションをチェック
+                    if not UserRelation.objects.filter(from_user=user2, to_user=user1).exists():
+                        UserRelation.objects.create(
+                            from_user=user2,
+                            to_user=user1
+                        )
 
             '''cafe = BoardGameCafe.objects.get(name=cafedict[result_user_cafe_dict[group[0]]])
             day = daydict[result_user_day_dict[group[0]]]

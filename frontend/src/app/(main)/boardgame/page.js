@@ -89,7 +89,7 @@ export default function Home() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="max-w-4xl mx-auto">
       {boardgames.length === 0 ? (
         <p className="text-center text-lg">ボードゲームは登録されていません</p>
       ) : (

@@ -111,7 +111,7 @@ export default function FreetimeSchedule() {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-4xl mx-auto">
       {days.map(day => (
         <div key={day} className="grid grid-cols-2 gap-4">
           {/* Daytime Card */}

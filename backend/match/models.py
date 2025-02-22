@@ -47,6 +47,7 @@ class UserRelation(models.Model):
     may_follow = models.BooleanField(default=False)
     must_follow = models.BooleanField(default=False)
     blocked = models.BooleanField(default=False)
+    memo = models.TextField(null=True, blank=True) 
 
 class UserCafeRelation(models.Model):
     user = models.ForeignKey('accounts.CustomUser',on_delete=models.CASCADE)

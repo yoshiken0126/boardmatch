@@ -81,7 +81,7 @@ export default function ChatComponent() {
   }
 
   return (
-    <div className="flex flex-col h-screen border rounded-lg bg-background">
+    <div className="max-w-4xl mx-auto">
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full p-4" ref={scrollAreaRef}>
           {messages && messages.length > 0 ? (
@@ -89,7 +89,10 @@ export default function ChatComponent() {
               <div key={index} className={`flex items-start mb-4 ${message.is_user_sender ? "justify-end" : ""}`}>
                 {!message.is_user_sender && (
                   <Avatar className="mr-2">
-                    <AvatarImage src="/placeholder.svg" alt={message.sender} />
+                    <AvatarImage 
+                      src={`http://localhost:8000${message.sender_profile_picture}`} 
+                      alt={message.sender} 
+                    />
                     <AvatarFallback>{message.sender[0]}</AvatarFallback>
                   </Avatar>
                 )}
@@ -106,7 +109,10 @@ export default function ChatComponent() {
                 </div>
                 {message.is_user_sender && (
                   <Avatar className="ml-2">
-                    <AvatarImage src="/placeholder.svg" alt={message.sender} />
+                    <AvatarImage 
+                      src={`http://localhost:8000${message.sender_profile_picture}`} 
+                      alt={message.sender} 
+                    />
                     <AvatarFallback>{message.sender[0]}</AvatarFallback>
                   </Avatar>
                 )}
@@ -118,23 +124,22 @@ export default function ChatComponent() {
         </ScrollArea>
       </div>
       <div className="p-4 border-t bg-background fixed bottom-16 left-0 right-0">
-  <form
-    onSubmit={(e) => {
-      e.preventDefault()
-      handleSendMessage()
-    }}
-    className="flex space-x-2"
-  >
-    <Input
-      value={newMessage}
-      onChange={(e) => setNewMessage(e.target.value)}
-      placeholder="メッセージを入力..."
-      className="flex-1"
-    />
-    <Button type="submit">送信</Button>
-  </form>
-</div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSendMessage()
+          }}
+          className="flex space-x-2"
+        >
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="メッセージを入力..."
+            className="flex-1"
+          />
+          <Button type="submit">送信</Button>
+        </form>
+      </div>
     </div>
   )
 }
-

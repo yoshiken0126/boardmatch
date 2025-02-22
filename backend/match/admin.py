@@ -31,8 +31,10 @@ class MatchDayUserAdmin(admin.ModelAdmin):
     list_display = ('matchday','user')
 
 class UserRelationAdmin(admin.ModelAdmin):
-    list_display = ('from_user','to_user','may_follow','must_follow','blocked')
-    list_filter = ('may_follow','must_follow','blocked','from_user' )
+    list_display = ('from_user', 'to_user', 'may_follow', 'must_follow', 'blocked', 'memo')  # 一覧表示するフィールド
+    search_fields = ('from_user__username', 'to_user__username')  # 検索可能なフィールド
+    list_filter = ('may_follow', 'must_follow', 'blocked')  # フィルタリングできるフィールド
+    ordering = ('from_user', 'to_user')  # 並び順を設定
 
 class UserGameRelationAdmin(admin.ModelAdmin):
     list_display = ('user','game','can_instruct','want_to_play','not_for_me')

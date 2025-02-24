@@ -136,10 +136,25 @@ class Reservation(models.Model):
     cafe = models.ForeignKey('accounts.BoardGameCafe', on_delete=models.CASCADE)  # どのカフェで予約か
     count = models.PositiveIntegerField(default=4)
     participant = models.ManyToManyField('accounts.CustomUser',through='Participant')
+    max_participants = models.PositiveIntegerField(default=4)  # 最大参加人数を示すフィールド
     timeslot = models.ManyToManyField('cafes.TableTimeSlot',through='ReservationTimeSlot')
     reserved_at = models.DateTimeField(auto_now_add=True)
     reservation_type = models.CharField(max_length=20, choices=[('match', 'マッチング予約'), ('user', 'アプリ予約'), ('staff', '店舗予約')], default='user')
     is_active = models.BooleanField(default=True)
+    is_recruiting = models.BooleanField(default=False)  # 募集中を表すフィールド
+    game_class = models.ForeignKey('accounts.GameClass', on_delete=models.SET_NULL, null=True, blank=True)
+    choice_game = models.ManyToManyField('accounts.BoardGame', blank=True,related_name='choice_game_reservations')
+    play_game = models.ManyToManyField('accounts.BoardGame', blank=True,related_name='play_game_reservations')
+
+    def save(self, *args, **kwargs):
+        # max_participants と count が同じ場合は is_recruiting を False に設定
+        if self.max_participants == self.count:
+            self.is_recruiting = False
+        # count が max_participants より少ない場合は is_recruiting を True に設定
+        elif self.count < self.max_participants:
+            self.is_recruiting = True
+
+        super().save(*args, **kwargs)  # 親クラスの save メソッドを呼び出す
 
 
 class Participant(models.Model):

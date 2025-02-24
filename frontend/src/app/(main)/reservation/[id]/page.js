@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { getToken } from "@/lib/auth"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { MoreVertical } from "lucide-react"
 
 export default function ChatComponent() {
   const [newMessage, setNewMessage] = useState("")
@@ -43,7 +45,7 @@ export default function ChatComponent() {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
     }
-  }, [scrollAreaRef])
+  }, [])
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return
@@ -76,6 +78,26 @@ export default function ChatComponent() {
     }
   }
 
+  const handleCancelReservation = async () => {
+    try {
+      const token = getToken()
+      const response = await axios.delete(`http://localhost:8000/match/api/participants/${id}/remove_participant/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (response.status === 200) {
+        alert("予約をキャンセルしました。")
+        window.location.href = "/boardgame";
+        
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "予約キャンセルに失敗しました"
+      console.error(errorMessage)
+      alert(errorMessage)
+    }
+  }
+
   if (isLoading) {
     return <div>読み込み中...</div>
   }
@@ -89,10 +111,7 @@ export default function ChatComponent() {
               <div key={index} className={`flex items-start mb-4 ${message.is_user_sender ? "justify-end" : ""}`}>
                 {!message.is_user_sender && (
                   <Avatar className="mr-2">
-                    <AvatarImage 
-                      src={`http://localhost:8000${message.sender_profile_picture}`} 
-                      alt={message.sender} 
-                    />
+                    <AvatarImage src={`http://localhost:8000${message.sender_profile_picture}`} alt={message.sender} />
                     <AvatarFallback>{message.sender[0]}</AvatarFallback>
                   </Avatar>
                 )}
@@ -109,10 +128,7 @@ export default function ChatComponent() {
                 </div>
                 {message.is_user_sender && (
                   <Avatar className="ml-2">
-                    <AvatarImage 
-                      src={`http://localhost:8000${message.sender_profile_picture}`} 
-                      alt={message.sender} 
-                    />
+                    <AvatarImage src={`http://localhost:8000${message.sender_profile_picture}`} alt={message.sender} />
                     <AvatarFallback>{message.sender[0]}</AvatarFallback>
                   </Avatar>
                 )}
@@ -137,6 +153,16 @@ export default function ChatComponent() {
             placeholder="メッセージを入力..."
             className="flex-1"
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top">
+              <DropdownMenuItem onClick={handleCancelReservation}>予約をキャンセル</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button type="submit">送信</Button>
         </form>
       </div>

@@ -52,6 +52,7 @@ const BottomNavigation = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          
         })
         
         // APIレスポンスから予約データを整形

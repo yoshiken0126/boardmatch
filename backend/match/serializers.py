@@ -178,6 +178,7 @@ class ReservationSerializer(serializers.ModelSerializer):
         reservation = Reservation.objects.create(
             cafe=cafe,
             count=validated_data['numberOfPeople'],
+            max_participants=validated_data['numberOfPeople'],
             reserved_at=timezone.now(),
             reservation_type=reservation_type
         )
@@ -204,5 +205,47 @@ class ReservationSerializer(serializers.ModelSerializer):
                 reservation=reservation,
                 user=user
             )
+        
+        return reservation
+
+
+
+
+class ParticipantSerializer(serializers.ModelSerializer):
+    participant_id = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), write_only=True)  # 参加者IDを一度に一人追加
+    remove_participant_id = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), write_only=True, required=False)  # 参加者削除用ID
+    cafe_name = serializers.CharField(source='cafe.name', read_only=True)
+    participant_name = serializers.StringRelatedField(source='participant.all', many=True, read_only=True)
+
+    # 最初のtimeslotのstart_time（lower）
+    start_time = serializers.DateTimeField(source='timeslot.first.timeslot_range.lower', read_only=True)
+    # 最後のtimeslotのend_time（upper）
+    end_time = serializers.DateTimeField(source='timeslot.last.timeslot_range.upper', read_only=True)
+
+    class Meta:
+        model = Reservation
+        fields = ['id', 'cafe','cafe_name', 'count', 'participant','participant_name', 'max_participants', 'timeslot', 'reserved_at', 'reservation_type', 'is_active', 'is_recruiting', 'game_class', 'choice_game', 'play_game', 'participant_id', 'remove_participant_id', 'start_time', 'end_time']
+
+    def create(self, validated_data):
+        # 参加者追加処理
+        participant_id = validated_data.pop('participant_id', None)
+        reservation = super().create(validated_data)
+        if participant_id:
+            Participant.objects.create(reservation=reservation, user_id=participant_id)  # 参加者を予約に追加
+        return reservation
+
+    def update(self, instance, validated_data):
+        # 参加者削除処理
+        participant_id_to_remove = validated_data.pop('remove_participant_id', None)
+        
+        reservation = super().update(instance, validated_data)
+        
+        if participant_id_to_remove:
+            try:
+                # 参加者を削除
+                participant = Participant.objects.get(reservation=reservation, user_id=participant_id_to_remove)
+                participant.delete()  # 参加者を削除
+            except Participant.DoesNotExist:
+                raise serializers.ValidationError("指定された参加者はこの予約に参加していません。")
         
         return reservation

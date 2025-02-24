@@ -278,7 +278,7 @@ export default function Home() {
                         <span className="text-xl font-bold">{cafe.name}</span>
                       </div>
                     </div>
-                    <div className="absolute top-2 right-2 sm:top-6 sm:right-6">
+                    <div className="absolute top-3 right-3 sm:top-6 sm:right-6">
                       <Switch
                         checked={switchStates[cafe.id] || false}
                         onCheckedChange={(checked) => handleSwitchChange(cafe.id, checked)}
@@ -427,4 +427,3 @@ export default function Home() {
     </div>
   )
 }
-

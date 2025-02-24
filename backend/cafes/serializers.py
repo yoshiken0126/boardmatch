@@ -79,7 +79,7 @@ class ReservationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Reservation
-        fields = ['id', 'cafe', 'cafe_name', 'table', 'count', 'reserved_at', 'reservation_type', 'start_time', 'end_time', 'participants', 'is_active']
+        fields = ['id', 'cafe', 'cafe_name', 'table', 'count', 'reserved_at', 'reservation_type', 'start_time', 'end_time', 'participants','max_participants', 'is_active','is_recruiting','game_class','choice_game','play_game']
     
 
 class MessageSerializer(serializers.ModelSerializer):

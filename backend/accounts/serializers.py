@@ -6,7 +6,7 @@ class CustomUserSerializer(serializers.ModelSerializer): #追記　Userのシリ
     
     class Meta:
         model = CustomUser
-        fields = ('id', 'username','password','is_optimize_active')
+        fields = ('id', 'username','password','is_optimize_active','email','profile_picture')
         extra_kwargs = {'password':{'write_only': True}} #パスワードフィールドを書き込み専用にする
     
     def create(self, validated_data):#create時にcreate_userメソッドを使用

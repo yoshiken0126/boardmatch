@@ -18,7 +18,7 @@ import datetime,random
 
 
 from accounts.serializers import CustomUserSerializer
-from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer,ReservationSerializer
+from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer,ReservationSerializer,ParticipantSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -27,6 +27,7 @@ from .filters import UserGameRelationFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from accounts.permissions import IsCustomUser,IsCustomUserOrIsStaffUser
 from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant
+from rest_framework.decorators import action
 
 
 
@@ -161,6 +162,80 @@ class ReservationViewSet(viewsets.ModelViewSet):
         """
         # シリアライザで定義された create メソッドを呼び出す
         serializer.save()
+
+class ParticipantViewSet(viewsets.ModelViewSet):
+    
+    serializer_class = ParticipantSerializer
+
+    def get_queryset(self):
+        user = self.request.user  # 現在認証されているユーザー
+
+        # ユーザーが訪れることができるカフェのリストを取得
+        allowed_cafes = UserCafeRelation.objects.filter(user=user, can_visit=True).values('cafe')
+
+        if self.request.method == 'GET' or self.request.method == 'POST':
+            # GETまたはPOSTの場合: 参加していない予約、かつ訪れることができるカフェの予約のみを表示
+            return Reservation.objects.filter(
+                is_active=True,
+                is_recruiting=True,
+                cafe__in=allowed_cafes  # ユーザーが訪れることができるカフェに関連する予約のみ
+            ).exclude(id__in=Participant.objects.filter(user=user).values('reservation_id'))
+
+        elif self.request.method == 'DELETE':
+            # DELETEの場合: ユーザーが参加しているすべての予約を取得
+            # ReservationモデルのParticipantテーブルを介してuserに関連する予約を取得
+            return Reservation.objects.filter(
+                user_relations__user=user  # Participantを介してユーザーが参加している予約を取得
+            )
+            # デフォルトは空のクエリセットを返す (必要に応じて変更)
+            return Reservation.objects.none()
+
+
+
+    # 参加者を予約に追加するアクション
+    @action(detail=True, methods=['post'])
+    def add_participant(self, request, pk=None):
+        reservation = self.get_object()
+        user = request.user
+        customuser = CustomUser.objects.get(id=user.id)
+
+        # 予約がアクティブで募集中かチェック
+        if not (reservation.is_active and reservation.is_recruiting):
+            return Response({"message": "この予約は現在参加を受け付けていません。"}, status=400)
+
+        # すでに参加しているかチェック
+        if reservation.participant.filter(id=user.id).exists():
+            return Response({"message": "あなたはすでに参加しています。"}, status=400)
+
+        # 参加者数の上限チェック
+        current_participants = reservation.participant.count()
+        if current_participants >= reservation.max_participants:
+            return Response({"message": "参加者数が上限に達しています。"}, status=400)
+
+        # 参加者を追加
+        Participant.objects.create(reservation=reservation, user=customuser)
+        reservation.count += 1
+        reservation.save()
+
+
+        return Response({"message": "参加者として追加されました。"}, status=200)
+
+    # 参加者を予約から削除するアクション
+    @action(detail=True, methods=['delete'])
+    def remove_participant(self, request, pk=None):
+        reservation = self.get_object()  # 対象の予約を取得
+        user = request.user  # 現在の認証ユーザー（自分自身）
+        customuser = CustomUser.objects.get(id=user.id)
+
+        try:
+            # 参加者を削除
+            participant = Participant.objects.get(reservation=reservation, user=customuser)
+            participant.delete()  # 参加者を削除
+            reservation.count -= 1
+            reservation.save()
+            return Response({"message": "予約から外れました。"}, status=200)
+        except Participant.DoesNotExist:
+            return Response({"message": "あなたはこの予約に参加していません。"}, status=400)
 
 
 

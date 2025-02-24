@@ -1,20 +1,28 @@
-'use client'
+"use client"
 
-import React, { useState, useEffect, useCallback } from 'react'
-import axios from 'axios'
+import { useState, useEffect, useCallback } from "react"
+import axios from "axios"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent } from "@/components/ui/card"
+import { Sun, Moon } from "lucide-react"
 
 export default function FreetimeSchedule() {
   const [freetimes, setFreetimes] = useState(null)
   const [switchStates, setSwitchStates] = useState({
-    monday_daytime: false, monday_nighttime: false,
-    tuesday_daytime: false, tuesday_nighttime: false,
-    wednesday_daytime: false, wednesday_nighttime: false,
-    thursday_daytime: false, thursday_nighttime: false,
-    friday_daytime: false, friday_nighttime: false,
-    saturday_daytime: false, saturday_nighttime: false,
-    sunday_daytime: false, sunday_nighttime: false
+    monday_daytime: false,
+    monday_nighttime: false,
+    tuesday_daytime: false,
+    tuesday_nighttime: false,
+    wednesday_daytime: false,
+    wednesday_nighttime: false,
+    thursday_daytime: false,
+    thursday_nighttime: false,
+    friday_daytime: false,
+    friday_nighttime: false,
+    saturday_daytime: false,
+    saturday_nighttime: false,
+    sunday_daytime: false,
+    sunday_nighttime: false,
   })
   const [userFreetimeId, setUserFreetimeId] = useState(null)
   const [nextWeekDates, setNextWeekDates] = useState({})
@@ -22,10 +30,10 @@ export default function FreetimeSchedule() {
   useEffect(() => {
     const fetchFreetimes = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/match/api/user_freetimes/', {
+        const response = await axios.get("http://localhost:8000/match/api/user_freetimes/", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          }
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         })
         if (response.data.length > 0) {
           const data = response.data[0]
@@ -45,11 +53,11 @@ export default function FreetimeSchedule() {
             saturday_daytime: data.saturday_daytime,
             saturday_nighttime: data.saturday_nighttime,
             sunday_daytime: data.sunday_daytime,
-            sunday_nighttime: data.sunday_nighttime
+            sunday_nighttime: data.sunday_nighttime,
           })
         }
       } catch (error) {
-        console.error('Error fetching freetimes:', error)
+        console.error("Error fetching freetimes:", error)
       }
     }
 
@@ -57,7 +65,7 @@ export default function FreetimeSchedule() {
   }, [])
 
   useEffect(() => {
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     const today = new Date()
     const nextMonday = new Date(today.getTime() + (7 - today.getDay() + 1) * 24 * 60 * 60 * 1000)
     const nextWeek = {}
@@ -70,82 +78,94 @@ export default function FreetimeSchedule() {
     setNextWeekDates(nextWeek)
   }, [])
 
-  const handleSwitchChange = useCallback((day, time, checked) => {
-    if (!userFreetimeId) {
-      console.error('User FreeTime ID is not set.')
-      return
-    }
-
-    const field = `${day}_${time}`
-
-    setSwitchStates((prevState) => ({
-      ...prevState,
-      [field]: checked,
-    }))
-
-    axios.patch(`http://localhost:8000/match/api/user_freetimes/${userFreetimeId}/`, {
-      [field]: checked
-    }, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+  const handleSwitchChange = useCallback(
+    (day, time, checked) => {
+      if (!userFreetimeId) {
+        console.error("User FreeTime ID is not set.")
+        return
       }
-    })
-    .then(response => {
-      console.log('Update successful:', response.data)
-    })
-    .catch(error => {
-      console.error('Error updating freetime:', error)
-    })
-  }, [userFreetimeId])
+
+      const field = `${day}_${time}`
+
+      setSwitchStates((prevState) => ({
+        ...prevState,
+        [field]: checked,
+      }))
+
+      axios
+        .patch(
+          `http://localhost:8000/match/api/user_freetimes/${userFreetimeId}/`,
+          {
+            [field]: checked,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          },
+        )
+        .then((response) => {
+          console.log("Update successful:", response.data)
+        })
+        .catch((error) => {
+          console.error("Error updating freetime:", error)
+        })
+    },
+    [userFreetimeId],
+  )
 
   const dayNames = {
-    monday: '月曜日',
-    tuesday: '火曜日',
-    wednesday: '水曜日',
-    thursday: '木曜日',
-    friday: '金曜日',
-    saturday: '土曜日',
-    sunday: '日曜日'
+    monday: "月曜日",
+    tuesday: "火曜日",
+    wednesday: "水曜日",
+    thursday: "木曜日",
+    friday: "金曜日",
+    saturday: "土曜日",
+    sunday: "日曜日",
   }
 
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+  const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {days.map(day => (
+    <div className="max-w-4xl mx-auto space-y-4">
+      {days.map((day) => (
         <div key={day} className="grid grid-cols-2 gap-4">
           {/* Daytime Card */}
-          <Card className="bg-background">
+          <Card className="bg-background hover:bg-accent transition-colors">
             <CardContent className="p-4">
-              <div className="flex flex-col space-y-2">
-                <div className="font-medium">
-                  {dayNames[day]}：{nextWeekDates[day]}
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-lg font-semibold">{dayNames[day]}</span>
+                  <span className="text-sm text-muted-foreground">{nextWeekDates[day]}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">昼 13:00~18:00 で利用可能</span>
-                  <Switch
-                    checked={switchStates[`${day}_daytime`]}
-                    onCheckedChange={(checked) => handleSwitchChange(day, 'daytime', checked)}
-                  />
-                </div>
+                <Sun className="h-6 w-6 text-yellow-500" />
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-sm font-medium">13:00 ~ 18:00</span>
+                <Switch
+                  checked={switchStates[`${day}_daytime`]}
+                  onCheckedChange={(checked) => handleSwitchChange(day, "daytime", checked)}
+                />
               </div>
             </CardContent>
           </Card>
 
           {/* Nighttime Card */}
-          <Card className="bg-background">
+          <Card className="bg-background hover:bg-accent transition-colors">
             <CardContent className="p-4">
-              <div className="flex flex-col space-y-2">
-                <div className="font-medium">
-                  {dayNames[day]}：{nextWeekDates[day]}
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-lg font-semibold">{dayNames[day]}</span>
+                  <span className="text-sm text-muted-foreground">{nextWeekDates[day]}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">夜 18:00~23:00 で利用可能</span>
-                  <Switch
-                    checked={switchStates[`${day}_nighttime`]}
-                    onCheckedChange={(checked) => handleSwitchChange(day, 'nighttime', checked)}
-                  />
-                </div>
+                <Moon className="h-6 w-6 text-blue-500" />
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-sm font-medium">18:00 ~ 23:00</span>
+                <Switch
+                  checked={switchStates[`${day}_nighttime`]}
+                  onCheckedChange={(checked) => handleSwitchChange(day, "nighttime", checked)}
+                />
               </div>
             </CardContent>
           </Card>

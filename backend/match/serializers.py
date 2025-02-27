@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from accounts.models import BoardGame,BoardGameCafe,CustomUser,Designer, GameClass, GameTag
-from match.models import UserGameRelation,UserFreeTime,UserCafeRelation,UserRelation
+from match.models import UserGameRelation,UserFreeTime,UserCafeRelation,UserRelation,UserFreeDay
 from cafes.models import Reservation,TableTimeSlot,CafeTable,ReservationTimeSlot,Participant
 from django.utils import timezone
 from datetime import datetime
@@ -64,6 +64,22 @@ class UserFreeTimeSerializer(serializers.ModelSerializer):
                          'saturday_daytime', 'saturday_nighttime', 
                          'sunday_daytime', 'sunday_nighttime']
         read_only_fields = ['user']
+
+class UserFreeDaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserFreeDay
+        fields = ['id', 'user', 'freeday', 'daytime', 'nighttime']
+        read_only_fields = ['user']
+
+    def validate(self, data):
+        daytime = data.get('daytime')
+        nighttime = data.get('nighttime')
+
+        if daytime == nighttime:
+            raise serializers.ValidationError("Either daytime or nighttime must be true, but not both.")
+
+        return data
+
 
 class UserCafeRelationSerializer(serializers.ModelSerializer):
     class Meta:

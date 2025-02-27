@@ -9,7 +9,7 @@ from django.views.generic import UpdateView,TemplateView,CreateView
 from match.forms import UserCafeRelationForm, UserCafeRelationFormset, UserFreeTimeForm,UserGameRelationForm,UserUserRelationForm
 from accounts.forms import BoardGameCafeForm
 from match.models import UserCafeRelation, UserFreeTime, MatchDay, MatchDayUser, UserRelation, UserGameRelation, \
-    GameChoice
+    GameChoice,UserFreeDay
 from accounts.models import BoardGameCafe
 from mip import Model,maximize,xsum
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -18,7 +18,7 @@ import datetime,random
 
 
 from accounts.serializers import CustomUserSerializer
-from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer,ReservationSerializer,ParticipantSerializer
+from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer,ReservationSerializer,ParticipantSerializer,UserFreeDaySerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -76,6 +76,23 @@ class UserGameRelationViewSet(viewsets.ModelViewSet):
             )
         return super().destroy(request, *args, **kwargs)
 
+
+class UserFreeDayViewSet(viewsets.ModelViewSet):
+    queryset = UserFreeDay.objects.all()
+    serializer_class = UserFreeDaySerializer
+    permission_classes = [IsCustomUser]
+
+    def perform_create(self, serializer):
+        # 現在のユーザーを自動的に設定
+        user = self.request.user
+        customuser = CustomUser.objects.get(username=user.username)
+        serializer.save(user=customuser)
+
+    def get_queryset(self):
+        # ログインしているユーザーに関連するUserFreeTimeだけを返す
+        user = self.request.user
+        customuser = CustomUser.objects.get(id=user.id)
+        return UserFreeDay.objects.filter(user=customuser)
 
 class UserFreeTimeViewSet(viewsets.ModelViewSet):
     queryset = UserFreeTime.objects.all()
@@ -718,7 +735,7 @@ def try_optimize(request):
     user_index_map = {user.id: index for index, user in enumerate(active_users)}
     num_users = len(active_users)
     num_cafes = len(cafes)
-    num_days = 14
+    num_days = 56
 
     list2 = []
     data = []
@@ -728,7 +745,7 @@ def try_optimize(request):
     
 
     for user in active_users:
-        user_freetime = UserFreeTime.objects.get(user=user).as_list()
+        user_freetime = get_user_free_time(user)
         freetime_list.append(user_freetime)
         
    
@@ -801,7 +818,7 @@ def try_optimize(request):
 
     cafe_reservations_count_list = []
     for cafe in cafes:
-        weekly_list = get_available_table_counts(cafe)
+        weekly_list = get_available_table_counts_for_4_weeks(cafe)
         cafe_reservations_count_list.append(weekly_list)
 
     print(cafe_reservations_count_list)
@@ -946,7 +963,7 @@ def try_optimize(request):
     cafe_id_dict = {i:cafe.id for i,cafe in enumerate(cafes)}
     cafedict = {i:cafe.name for i,cafe in enumerate(cafes)}
     daydict = get_next_week_dates()
-    start_times, end_times = generate_time_slots()
+    start_times, end_times = generate_time_slots_for_4_weeks()
 
     result_list = np.array([[[int(cafe.x) for cafe in user] for user in day] for day in x])
     result_index_np = np.where(result_list == 1)
@@ -1007,8 +1024,10 @@ def try_optimize(request):
 
     for cafe in range(len(user_group_in_cafe)):
         for group in user_group_in_cafe[cafe]:
-            available_table_list = get_available_table_ids_for_week(cafe_id_dict[result_user_cafe_dict[group[0]]])
-            print(available_table_list)
+            available_table_list = get_available_table_ids_for_4_weeks(cafe_id_dict[result_user_cafe_dict[group[0]]])
+            print(f'これはavailable_table_listです{available_table_list}')
+            print(f'これはresult_user_day_dict[group[0]]です{result_user_day_dict[group[0]]}')
+            
 
             cafe = BoardGameCafe.objects.get(id=cafe_id_dict[result_user_cafe_dict[group[0]]])
             table = CafeTable.objects.get(id=available_table_list[result_user_day_dict[group[0]]][0])

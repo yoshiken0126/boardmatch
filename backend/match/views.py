@@ -31,6 +31,7 @@ from rest_framework.decorators import action
 
 
 
+
 # Create your views here.
 class BoardGameViewSet(viewsets.ModelViewSet):
     queryset = BoardGame.objects.all()
@@ -398,6 +399,19 @@ def get_next_week_dates():
     next_monday = today + datetime.timedelta(days=7 - today.weekday())
     next_week_dates = [next_monday + datetime.timedelta(days=i) for i in range(7)]
     return next_week_dates
+#試し
+def get_next_4_weeks_dates():
+    today = datetime.date.today()
+    weekday = today.weekday()  # 今日が週の何日目か（月曜日が0、日曜日が6）
+    # 次の月曜日の日付を求める
+    next_monday = today + datetime.timedelta(days=7 - today.weekday())
+    # 4週間分の日付を作成
+    all_dates = []
+    for week in range(4):
+        week_dates = [next_monday + datetime.timedelta(days=i + week * 7) for i in range(7)]
+        all_dates.extend(week_dates)  # 1次元配列に追加
+    
+    return all_dates
 
 
 def get_available_table_counts(cafe_id):
@@ -436,8 +450,45 @@ def get_available_table_counts(cafe_id):
         available_table_counts.append(available_count_18_23)
     
     return available_table_counts
+#試し
+def get_available_table_counts_for_4_weeks(cafe_id):
+    from django.utils import timezone
+    from datetime import datetime, timedelta
+    # 現在の日時を取得
+    now = timezone.now()
 
+    # 現在の週の翌週の月曜日の日付を取得
+    start_of_next_week = now + timedelta(days=(7 - now.weekday()))
+    
+    # 返すべき結果を格納するリスト
+    available_table_counts = []
 
+    # 4週間分（28日分）の各日の13時～18時と18時～23時のスロットを調べる
+    for week in range(4):
+        for i in range(7):
+            # 各日の開始時刻と終了時刻を設定
+            current_day = start_of_next_week + timedelta(weeks=week, days=i)
+            
+            # 13:00～18:00のスロット
+            start_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 13, 0))
+            end_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+            
+            # 18:00～23:00のスロット
+            start_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+            end_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 23, 0))
+            
+            # 13:00～18:00の予約可能なテーブル数を計算
+            available_count_13_18 = count_available_tables(cafe_id, start_time_13_18, end_time_13_18)
+            
+            # 18:00～23:00の予約可能なテーブル数を計算
+            available_count_18_23 = count_available_tables(cafe_id, start_time_18_23, end_time_18_23)
+
+            # 結果をリストに追加
+            available_table_counts.append(available_count_13_18)
+            available_table_counts.append(available_count_18_23)
+    
+    return available_table_counts
+#上二つで使用
 def count_available_tables(cafe_id, start_time, end_time):
     # 指定されたカフェIDに関連するテーブルを取得
     cafe_tables = CafeTable.objects.filter(cafe_id=cafe_id)
@@ -465,9 +516,10 @@ def count_available_tables(cafe_id, start_time, end_time):
     
     return available_table_count
 
-#空いているテーブルIDを取得する
+#空いているテーブルIDを取得する関数
 
 def get_available_table_ids_for_week(cafe_id):
+
     from datetime import datetime, timedelta
     from django.utils import timezone
     from cafes.models import CafeTable, TableTimeSlot
@@ -504,8 +556,46 @@ def get_available_table_ids_for_week(cafe_id):
         available_table_ids.append(available_ids_18_23)
     
     return available_table_ids
+#試し
+def get_available_table_ids_for_4_weeks(cafe_id):
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    from cafes.models import CafeTable, TableTimeSlot
+    # 現在の日時を取得
+    now = timezone.now()
+    
+    # 現在の週の翌週の月曜日の日付を取得
+    start_of_next_week = now + timedelta(days=(7 - now.weekday()))
+    
+    # 返すべき結果を格納するリスト
+    available_table_ids = []
 
+    # 4週間分（28日間）の各日の13時～18時と18時～23時を調べる
+    for week in range(4):  # 4週間分
+        for i in range(7):  # 月曜日から日曜日まで
+            # 各日の開始時刻と終了時刻を設定
+            current_day = start_of_next_week + timedelta(weeks=week, days=i)
+            
+            # 13:00～18:00のスロット
+            start_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 13, 0))
+            end_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+            
+            # 18:00～23:00のスロット
+            start_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+            end_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 23, 0))
+            
+            # 予約可能なテーブルIDを取得（13:00～18:00）
+            available_ids_13_18 = get_available_table_ids_for_slot(cafe_id, start_time_13_18, end_time_13_18)
+            
+            # 予約可能なテーブルIDを取得（18:00～23:00）
+            available_ids_18_23 = get_available_table_ids_for_slot(cafe_id, start_time_18_23, end_time_18_23)
 
+            # 結果をリストに追加
+            available_table_ids.append(available_ids_13_18)
+            available_table_ids.append(available_ids_18_23)
+    
+    return available_table_ids
+#上二つで使用
 def get_available_table_ids_for_slot(cafe_id, start_time, end_time):
     # 指定されたカフェIDに関連するテーブルを取得
     cafe_tables = CafeTable.objects.filter(cafe_id=cafe_id)
@@ -541,7 +631,7 @@ def generate_time_slots():
     now = timezone.now()
     start_of_next_week = now + timedelta(days=(7 - now.weekday()))
 
-    # スタートタイムとエンドタイムのリスト
+    # スタートタイエンドタイムムとのリスト
     start_times = []
     end_times = []
 
@@ -563,6 +653,62 @@ def generate_time_slots():
 
     return start_times, end_times
 
+#試し
+def generate_time_slots_for_4_weeks():
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    # 現在の日時を取得
+    now = timezone.now()
+    
+    # 現在の週の翌週の月曜日の日付を取得
+    start_of_next_week = now + timedelta(days=(7 - now.weekday()))
+    
+    # スタートタイムとエンドタイムのリスト
+    start_times = []
+    end_times = []
+
+    # 4週間分（28日間）の各日の13時～18時と18時～23時を生成
+    for week in range(4):  # 4週間分
+        for i in range(7):  # 月曜日から日曜日まで
+            current_day = start_of_next_week + timedelta(weeks=week, days=i)
+            
+            # 13:00～18:00のスロット
+            start_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 13, 0))
+            end_time_13_18 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+            
+            # 18:00～23:00のスロット
+            start_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 18, 0))
+            end_time_18_23 = timezone.make_aware(datetime(current_day.year, current_day.month, current_day.day, 23, 0))
+            
+            # リストに追加
+            start_times.extend([start_time_13_18, start_time_18_23])
+            end_times.extend([end_time_13_18, end_time_18_23])
+
+    return start_times, end_times
+
+def get_user_free_time(user):
+    from datetime import timedelta
+    from django.utils import timezone
+    from .models import UserFreeDay
+    # 次の月曜日を求める
+    now = timezone.now()
+    start_of_next_week = now + timedelta(days=(7 - now.weekday()))  # 次の月曜日
+    
+    # 4週間分のデータを取得
+    free_days = UserFreeDay.objects.filter(user=user, freeday__gte=start_of_next_week, freeday__lt=start_of_next_week + timedelta(weeks=4))
+    
+    # 週ごとのリストを作成
+    result = []
+    for week_offset in range(4):  # 4週間分
+        for day_offset in range(7):  # 7日間
+            day_of_week = start_of_next_week + timedelta(days=week_offset * 7 + day_offset)
+            daytime = free_days.filter(freeday=day_of_week, daytime=True).exists()
+            nighttime = free_days.filter(freeday=day_of_week, nighttime=True).exists()
+            result.append(daytime)  # daytime
+            result.append(nighttime)  # nighttime
+    
+    return result
+
 
 
 
@@ -579,10 +725,14 @@ def try_optimize(request):
     false_list1 = [False]*num_cafes
     false_list2 = []
     freetime_list = []
+    
 
     for user in active_users:
         user_freetime = UserFreeTime.objects.get(user=user).as_list()
         freetime_list.append(user_freetime)
+        
+   
+    
 
     for day in range(num_days):
         list2 = []
@@ -642,11 +792,11 @@ def try_optimize(request):
     from cafes.models import CafeTable
 
     # カフェIDを指定
-    cafe_id = 7  # 例としてカフェIDを1に指定
+    cafe_id = 10  # 例としてカフェIDを1に指定
 
 
 
-    otinpo = get_available_table_counts(cafe_id)
+    otinpo = get_available_table_counts_for_4_weeks(cafe_id)
     print(f'これはotinpoです{otinpo}')
 
     cafe_reservations_count_list = []
@@ -921,4 +1071,7 @@ def try_optimize(request):
     game_x = gf_true.astype(float, subok=False).round()
     val_x = x.astype(float, subok=False).round()
     outcome = m.objective_value
+
+    a = get_next_4_weeks_dates()
+    print(a)
     return HttpResponse(val_x)

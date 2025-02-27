@@ -3,9 +3,30 @@
 from django.db import models
 from django.db.models import DateField, DateTimeField, ManyToManyField
 from django.forms import BooleanField
+from django.core.exceptions import ValidationError
 
 
-# Create your models here.
+# Create your models here
+
+class UserFreeDay(models.Model):
+    user = models.ForeignKey('accounts.CustomUser', on_delete=models.CASCADE)
+    freeday = models.DateField()  # 自由な日
+    daytime = models.BooleanField(default=False,verbose_name='昼')
+    nighttime = models.BooleanField(default=False,verbose_name='夜')
+
+    def clean(self):
+        # 同じユーザーと同じ日に昼のインスタンスがすでに存在するかチェック
+        if self.daytime and UserFreeDay.objects.filter(user=self.user, freeday=self.freeday, daytime=True).exists():
+            raise ValidationError("このユーザーはすでに昼のインスタンスを作成しています。")
+
+        # 同じユーザーと同じ日に夜のインスタンスがすでに存在するかチェック
+        if self.nighttime and UserFreeDay.objects.filter(user=self.user, freeday=self.freeday, nighttime=True).exists():
+            raise ValidationError("このユーザーはすでに夜のインスタンスを作成しています。")
+        
+    def save(self, *args, **kwargs):
+        self.clean()  # 保存前にバリデーションを実行
+        super().save(*args, **kwargs)
+
 
 class UserFreeTime(models.Model):
     user = models.ForeignKey('accounts.CustomUser', on_delete=models.CASCADE)

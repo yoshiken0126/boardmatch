@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.forms import UserCreationForm
 from match.models import UserFreeTime, UserCafeRelation, MatchDay, MatchDayUser, UserRelation, UserGameRelation, \
-    GameChoice
+    GameChoice,UserFreeDay
 from accounts.models import BoardGameCafe
 
 class CustomRelationAdmin(admin.ModelAdmin):
@@ -44,6 +44,11 @@ class GameChoiceAdmin(admin.ModelAdmin):
     list_display = ('matchday', 'game')
 # Register your models here.
 
+class UserFreeDayAdmin(admin.ModelAdmin):
+    list_display = ('user', 'freeday', 'daytime', 'nighttime')  # モデルの項目を管理画面に表示
+    list_filter = ('user', 'freeday')  # フィルター項目を設定
+    search_fields = ('user__username', 'freeday')  # 検索できる項目を設定
+
 admin.site.register(UserFreeTime,CustomFreeAdmin)
 admin.site.register(UserCafeRelation,CustomRelationAdmin)
 admin.site.register(MatchDay,MatchDayAdmin)
@@ -51,3 +56,4 @@ admin.site.register(MatchDayUser,MatchDayUserAdmin)
 admin.site.register(UserRelation,UserRelationAdmin)
 admin.site.register(UserGameRelation,UserGameRelationAdmin)
 admin.site.register(GameChoice,GameChoiceAdmin)
+admin.site.register(UserFreeDay, UserFreeDayAdmin)

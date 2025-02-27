@@ -66,8 +66,8 @@ class CafeTable(models.Model):
             6: 'sunday'
         }
 
-        # 1週間ごとのタイムスロットを4週間分作成
-        for week_offset in range(4):
+        # 1週間ごとのタイムスロットを5週間分作成
+        for week_offset in range(5):
             for day_offset in range(7):
                 day_start = start_of_week + timedelta(weeks=week_offset, days=day_offset)
                 weekday_name = weekday_names[day_start.weekday()]

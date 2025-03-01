@@ -37,8 +37,8 @@ class UserRelationAdmin(admin.ModelAdmin):
     ordering = ('from_user', 'to_user')  # 並び順を設定
 
 class UserGameRelationAdmin(admin.ModelAdmin):
-    list_display = ('user','game','can_instruct','want_to_play','not_for_me')
-    list_filter = ('can_instruct', 'want_to_play','not_for_me','user','game')
+    list_display = ('user','game','can_instruct','want_to_play','not_for_me','is_having')
+    list_filter = ('can_instruct', 'want_to_play','not_for_me','is_having','user','game')
 
 class GameChoiceAdmin(admin.ModelAdmin):
     list_display = ('matchday', 'game')

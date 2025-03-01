@@ -1,6 +1,6 @@
 
 
-from accounts.models import CustomUser, BoardGame
+from accounts.models import CustomUser, BoardGame,GameClass
 from django.http import HttpResponseForbidden, HttpResponse
 from django.shortcuts import render,get_object_or_404,redirect
 from django.template.context_processors import request
@@ -18,7 +18,7 @@ import datetime,random
 
 
 from accounts.serializers import CustomUserSerializer
-from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer,ReservationSerializer,ParticipantSerializer,UserFreeDaySerializer
+from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer,ReservationSerializer,ParticipantSerializer,UserFreeDaySerializer,UserHaveGameSerializer,CafeHaveGameSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -26,7 +26,7 @@ from rest_framework import permissions,viewsets
 from .filters import UserGameRelationFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from accounts.permissions import IsCustomUser,IsCustomUserOrIsStaffUser
-from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant
+from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant,CafeGameRelation
 from rest_framework.decorators import action
 
 
@@ -167,6 +167,89 @@ class UserInfoViewSet(viewsets.GenericViewSet):
             serializer.save()  # ユーザー情報を保存
             return Response(serializer.data)  # 更新したデータを返す
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserHaveGameViewSet(viewsets.ModelViewSet):
+    serializer_class = UserHaveGameSerializer
+
+    def list(self, request, game_class):
+        try:
+            # ゲームクラスの識別子を日本語表記にマッピング
+            game_class_mapping = {
+                'light': '軽量級',
+                'medium': '中量級',
+                'heavy': '重量級',
+            }
+
+            # game_class がマッピングに存在するか確認
+            if game_class not in game_class_mapping:
+                return Response({"error": "無効なゲームクラスです"}, status=400)
+
+            # ゲームクラス名を取得
+            game_class_name = game_class_mapping[game_class]
+
+            # ゲームクラスを取得
+            game_class_instance = GameClass.objects.get(name=game_class_name)
+
+            # ユーザーが所有しているゲームの関係を取得
+            user = request.user
+            customuser = CustomUser.objects.get(id=user.id)
+            
+            # ゲームクラスに関連するゲームかつユーザーが所有しているゲームをフィルタリング
+            user_games = UserGameRelation.objects.filter(
+                user=customuser,
+                is_having=True,
+                game__game_class=game_class_instance
+            )
+
+            # シリアライズして返す
+            serializer = UserHaveGameSerializer(user_games, many=True)
+            return Response(serializer.data)
+
+        except GameClass.DoesNotExist:
+            return Response({"error": "指定されたゲームクラスが存在しません"}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+class CafeHaveGameViewSet(viewsets.ModelViewSet):
+    serializer_class = CafeHaveGameSerializer
+
+    def list(self, request, cafe_id, player_class):
+        try:
+            # プレイヤークラスの識別子を日本語表記にマッピング
+            game_class_mapping = {
+                'light': '軽量級',
+                'medium': '中量級',
+                'heavy': '重量級',
+            }
+
+            # player_classがマッピングに存在するか確認
+            if player_class not in game_class_mapping:
+                return Response({"error": "無効なプレイヤークラスです"}, status=400)
+
+            # ゲームクラス名を取得
+            game_class_name = game_class_mapping[player_class]
+            print(cafe_id)
+
+            # ゲームクラスを取得
+            game_class_instance = GameClass.objects.get(name=game_class_name)
+
+            # カフェIDに基づいて関連するゲームを取得
+            cafe_game_relations = CafeGameRelation.objects.filter(
+                cafe_id=cafe_id,
+                game__game_class=game_class_instance
+            )
+
+            # シリアライズして返す
+            serializer = CafeHaveGameSerializer(cafe_game_relations, many=True)
+            return Response(serializer.data)
+
+        except GameClass.DoesNotExist:
+            return Response({"error": "指定されたゲームクラスが存在しません"}, status=400)
+        except CafeGameRelation.DoesNotExist:
+            return Response({"error": "指定されたカフェに関連するゲームが存在しません"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
 
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()  # 予約の一覧を取得

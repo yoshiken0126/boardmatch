@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from accounts.models import BoardGame,BoardGameCafe,CustomUser,Designer, GameClass, GameTag
 from match.models import UserGameRelation,UserFreeTime,UserCafeRelation,UserRelation,UserFreeDay
-from cafes.models import Reservation,TableTimeSlot,CafeTable,ReservationTimeSlot,Participant
+from cafes.models import Reservation,TableTimeSlot,CafeTable,ReservationTimeSlot,Participant,CafeGameRelation
 from django.utils import timezone
 from datetime import datetime
 
@@ -21,6 +21,22 @@ class BoardGameSerializer(serializers.ModelSerializer):
             'short_description', 'long_description', 'game_class', 'game_tags', 'box_image',
             'board_image', 'created_at', 'updated_at'
         ]
+
+class UserHaveGameSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='game.id')
+    name = serializers.CharField(source='game.name')
+    
+    class Meta:
+        model = UserGameRelation
+        fields = ['id', 'name']
+
+class CafeHaveGameSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='game.id')
+    name = serializers.CharField(source='game.name')
+    
+    class Meta:
+        model = CafeGameRelation  # カフェとゲームの関連を表すモデル
+        fields = ['id', 'name']
 
 
 class BoardGameCafeSerializer(serializers.ModelSerializer):

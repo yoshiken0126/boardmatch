@@ -84,9 +84,10 @@ class UserGameRelation(models.Model):
     can_instruct = models.BooleanField(default=False)
     want_to_play = models.BooleanField(default=False)
     not_for_me = models.BooleanField(default=False)
+    is_having = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ('user', 'game', 'can_instruct','want_to_play','not_for_me')
+        unique_together = ('user', 'game', 'can_instruct','want_to_play','not_for_me','is_having')
 
 
 class MatchDay(models.Model):

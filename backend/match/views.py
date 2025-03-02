@@ -52,7 +52,7 @@ class UserGameRelationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # ログイン中のユーザーに関連するUserGameRelationを返す
         user = self.request.user
-        return UserGameRelation.objects.filter(user=user)
+        return UserGameRelation.objects.filter(user=user,want_to_play=True)
     def perform_create(self, serializer):
         # 現在のユーザーを自動的に設定
         user = self.request.user

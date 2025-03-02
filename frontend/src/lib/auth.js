@@ -19,7 +19,6 @@ export const getToken = () => {
       return null;
     }
   }
-  console.log('windowが未定義です。サーバーサイドレンダリングの可能性があります');
   return null;
 };
 

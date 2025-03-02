@@ -1,5 +1,6 @@
 "use client"
 import axios from "axios"
+import { useRouter } from "next/navigation"
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -59,6 +60,8 @@ export default function Navbar() {
   const { logout } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [reservations, setReservations] = useState([])
+  const [isLoadingReservations, setIsLoadingReservations] = useState(true)
+  const router = useRouter()
 
   const getUserInfo = useCallback(async () => {
     try {
@@ -80,9 +83,9 @@ export default function Navbar() {
 
       if (response.status === 200) {
         const userData = response.data
-        console.log("取得したユーザーデータ:", userData) // 取得したデータを確認
+        console.log("取得したユーザーデータ:", userData)
         setUserData(userData)
-        setIsOptimizeActive(userData.is_optimize_active) // 初期状態として設定
+        setIsOptimizeActive(userData.is_optimize_active)
       } else {
         console.error("ユーザー情報の取得に失敗しました", response)
       }
@@ -133,36 +136,73 @@ export default function Navbar() {
       if (response.status === 200) {
         // Refresh the reservations list
         fetchReservations()
-        // Reload the entire page
-        window.location.reload()
+        // Navigate to the reservation page
+        router.push(`/reservation/${reservationId}/`)
       }
     } catch (error) {
       // エラーメッセージを表示
       const errorMessage = error.response?.data?.message || "予約参加に失敗しました"
       console.error(errorMessage)
       // ここでユーザーにエラーメッセージを表示する処理を追加
-      // 例: alert(errorMessage) または適切なUIコンポーネントでの表示
     }
   }
 
-  const fetchReservations = useCallback(async () => {
-    try {
-      const token = getToken()
-      const response = await axios.get("http://localhost:8000/match/api/participants/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      setReservations(response.data)
-    } catch (error) {
-      console.error("予約情報の取得に失敗しました:", error)
+  const fetchReservations = useCallback(() => {
+    // ナビバーの表示を遅らせないよう、状態を即座に更新
+    setIsLoadingReservations(true)
+
+    // 非同期処理を開始するが、完了を待たない
+    const fetchData = async () => {
+      try {
+        const token = getToken()
+        const response = await axios.get("http://localhost:8000/match/api/participants/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        setReservations(response.data)
+        setIsLoadingReservations(false)
+        console.log(response)
+      } catch (error) {
+        console.error("予約情報の取得に失敗しました:", error)
+        setIsLoadingReservations(false)
+      }
     }
+
+    // 非同期処理を開始
+    fetchData()
   }, [])
 
   useEffect(() => {
     getUserInfo()
     fetchReservations()
   }, [getUserInfo, fetchReservations])
+
+  // ゲーム情報を取得して表示用にフォーマットする関数
+  const getGameInfo = (reservation) => {
+    const cafeGames = reservation.cafe_games || []
+    const userGames = reservation.user_games || []
+    const allGames = [...cafeGames, ...userGames]
+
+    if (allGames.length === 0) {
+      return "未定"
+    }
+
+    return allGames
+      .map((game) => {
+        const gameName = game.name || "不明なゲーム"
+        const instructorInfo = game.instructor_name ? `（説明者: ${game.instructor_name}）` : ""
+
+        return `${gameName}${instructorInfo}`
+      })
+      .join(", ")
+  }
+
+  // 日本語の曜日を取得する関数
+  const getJapaneseDayOfWeek = (date) => {
+    const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()]
+    return `(${dayOfWeek})`
+  }
 
   return (
     <nav className="bg-white shadow">
@@ -179,40 +219,52 @@ export default function Navbar() {
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </Link>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-72">
+                <DropdownMenuContent className="w-72 max-h-[60vh] overflow-y-auto">
                   <DropdownMenuLabel>募集中の予約</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {reservations
-                    .filter((r) => r.is_recruiting)
-                    .map((reservation) => (
-                      <DropdownMenuItem key={reservation.id} className="flex flex-col items-start">
-                        <div className="flex flex-col w-full">
-                          <span className="font-medium">{reservation.cafe_name}</span>
-                          <span className="text-sm text-gray-500">
-                            {new Date(reservation.start_time).toLocaleString("ja-JP")}
-                          </span>
-                          <span className="text-sm">
-                            ゲーム:{" "}
-                            {reservation.play_game && reservation.play_game.length > 0
-                              ? reservation.play_game.join(", ")
-                              : "未定"}
-                          </span>
-                          <span className="text-sm">
-                            募集人数: {reservation.max_participants - reservation.count}人
-                          </span>
-                          <Button
-                            onClick={(e) => {
-                              e.preventDefault()
-                              handleJoin(reservation.id)
-                            }}
-                            className="mt-2 w-full"
-                            variant="outline"
-                          >
-                            参加する
-                          </Button>
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
+                  {isLoadingReservations ? (
+                    <div className="py-2 px-2 text-center">
+                      <span className="text-sm text-gray-500">読み込み中...</span>
+                    </div>
+                  ) : reservations.filter((r) => r.is_recruiting).length > 0 ? (
+                    reservations
+                      .filter((r) => r.is_recruiting)
+                      .map((reservation) => {
+                        const startDate = new Date(reservation.start_time)
+                        const endDate = new Date(reservation.end_time)
+                        return (
+                          <DropdownMenuItem key={reservation.id} className="flex flex-col items-start">
+                            <div className="flex flex-col w-full">
+                              <span className="text-sm">
+                                日時：{startDate.toLocaleDateString("ja-JP", { month: "long", day: "numeric" })}
+                                {getJapaneseDayOfWeek(startDate)}　
+                                {startDate.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}～
+                                {endDate.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                              <span className="text-sm">カフェ：{reservation.cafe_name}</span>
+                              <span className="text-sm">ゲーム：{getGameInfo(reservation)}</span>
+                              <span className="text-sm">
+                                募集人数：{reservation.max_participants - reservation.count}人
+                              </span>
+                              <Button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  handleJoin(reservation.id)
+                                }}
+                                className="mt-2 w-full"
+                                variant="outline"
+                              >
+                                参加する
+                              </Button>
+                            </div>
+                          </DropdownMenuItem>
+                        )
+                      })
+                  ) : (
+                    <div className="py-2 px-2 text-center">
+                      <span className="text-sm text-gray-500">現在募集中の予約はありません</span>
+                    </div>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

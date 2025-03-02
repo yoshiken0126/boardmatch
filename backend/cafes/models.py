@@ -144,7 +144,7 @@ class Reservation(models.Model):
     is_recruiting = models.BooleanField(default=False)  # 募集中を表すフィールド
     game_class = models.ForeignKey('accounts.GameClass', on_delete=models.SET_NULL, null=True, blank=True)
     choice_game = models.ManyToManyField('accounts.BoardGame', blank=True,related_name='choice_game_reservations')
-    play_game = models.ManyToManyField('accounts.BoardGame', blank=True,related_name='play_game_reservations')
+    play_game = models.ManyToManyField('accounts.BoardGame', blank=True,related_name='play_game_reservations',through='PlayGame')
 
     def save(self, *args, **kwargs):
         # max_participants と count が同じ場合は is_recruiting を False に設定
@@ -156,6 +156,32 @@ class Reservation(models.Model):
 
         super().save(*args, **kwargs)  # 親クラスの save メソッドを呼び出す
 
+
+class PlayGame(models.Model):
+    reservation = models.ForeignKey('Reservation', on_delete=models.CASCADE)  # 予約に紐づく
+    game = models.ForeignKey('accounts.BoardGame', on_delete=models.CASCADE, related_name='playgames')  # プレイするゲーム 
+    provider = models.ForeignKey('accounts.CustomUser', on_delete=models.CASCADE, null=True, blank=True, related_name='provided_games')  # ゲームを持ち込むユーザー 
+    instructor = models.ForeignKey('accounts.BaseUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='instructed_games')  # ルール説明者 
+    game_provider_type = models.CharField(
+        max_length=10,
+        choices=[('cafe', 'カフェ'), ('user', 'ユーザー')],
+        default='cafe'
+    )  # ゲームを提供する主体（カフェかユーザーかを区別）
+
+    class Meta:
+        unique_together = ('reservation', 'game', 'game_provider_type')  # 予約、ゲーム、提供者タイプの組み合わせが一意であることを保証
+
+    def save(self, *args, **kwargs):
+        # userが指定されている場合、game_provider_typeを'user'に設定
+        if self.provider:
+            self.game_provider_type = 'user'
+        # game_provider_typeが指定されていない場合、cafeをデフォルトに設定
+        if not self.game_provider_type:
+            self.game_provider_type = 'cafe'
+
+        super().save(*args, **kwargs)  # 親クラスのsaveメソッドを呼び出す
+
+        
 
 class Participant(models.Model):
     reservation = models.ForeignKey('cafes.Reservation', on_delete=models.CASCADE,related_name='user_relations')

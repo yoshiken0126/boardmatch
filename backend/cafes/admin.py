@@ -1,4 +1,4 @@
-from cafes.models import CafeGameRelation, StaffGameRelation,Message
+from cafes.models import CafeGameRelation, StaffGameRelation,Message,PlayGame
 from django.contrib import admin
 from django.utils import timezone
 
@@ -43,9 +43,9 @@ class TableTimeSlotAdmin(admin.ModelAdmin):
 
 # Reservation 管理画面設定
 class ReservationAdmin(admin.ModelAdmin):
-    list_display = ('cafe','count', 'reserved_at', 'reservation_type', 'get_participants', 'get_timeslots','is_active','is_recruiting','game_class','max_participants')
+    list_display = ('cafe', 'count', 'reserved_at', 'reservation_type', 'get_participants', 'get_timeslots', 'get_playgames', 'is_active', 'is_recruiting', 'game_class', 'max_participants')
     search_fields = ('cafe__name',)
-    list_filter = ('cafe', 'reservation_type','is_active','is_recruiting')  # カフェや予約タイプでフィルタリング
+    list_filter = ('cafe', 'reservation_type', 'is_active', 'is_recruiting')  # カフェや予約タイプでフィルタリング
     date_hierarchy = 'reserved_at'  # 予約日で絞り込み
 
     # 参加者を表示するカスタムメソッド
@@ -62,6 +62,19 @@ class ReservationAdmin(admin.ModelAdmin):
         # timeslot.timeslot_range.lower を使って開始時刻を表示
         return "\n".join([str(timezone.localtime(timeslot.timeslot_range.lower).strftime('%Y-%m-%d %H:%M:%S')) for timeslot in timeslots])
     get_timeslots.short_description = 'Time Slots'  # カラム名を指定
+
+    # プレイゲームを表示するカスタムメソッド
+    def get_playgames(self, obj):
+        # 予約に関連する PlayGame の情報を取得
+        playgames = PlayGame.objects.filter(reservation=obj)
+        # プレイゲームのゲーム名、提供者、インストラクターを表示
+        return "\n".join([f"{playgame.game.name} (提供者: {playgame.provider.username if playgame.provider else 'カフェ'}, インストラクター: {playgame.instructor.username if playgame.instructor else 'なし'})" for playgame in playgames])
+    get_playgames.short_description = 'Play Games'  # カラム名を指定
+
+
+class PlayGameAdmin(admin.ModelAdmin):
+    list_display = ('reservation', 'game', 'provider', 'instructor', 'game_provider_type')
+    list_filter = ('game_provider_type', 'game', 'provider')  # ゲーム提供元や提供者でフィルタリング
 
 
 
@@ -106,6 +119,7 @@ admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(Participant, ParticipantAdmin)
 admin.site.register(ReservationTimeSlot, ReservationTimeSlotAdmin)
 admin.site.register(Message, MessageAdmin)
+admin.site.register(PlayGame, PlayGameAdmin)
 
 
 

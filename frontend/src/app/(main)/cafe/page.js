@@ -218,7 +218,7 @@ export default function Home() {
       max_participants: isRecruiting ? numberOfPeople + recruitmentCount : numberOfPeople,
       cafe_games: selectedCafeGames,
       personal_games: selectedPersonalGames,
-      player_class: playerClass,
+      game_class: playerClass,
     }
 
     try {
@@ -247,6 +247,7 @@ export default function Home() {
       window.location.reload()
     } catch (error) {
       console.error("予約の送信中にエラーが発生しました:", error)
+      console.log(error.response.data);
       setError("予約の送信中にエラーが発生しました")
     }
   }

@@ -15,6 +15,7 @@ import { CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 
 // トークン取得関数のインポート（別ファイルで定義されていると仮定）
@@ -116,6 +117,14 @@ export default function CafeReservation() {
   const [reservationEndTime, setReservationEndTime] = useState("")
   const [numberOfPeople, setNumberOfPeople] = useState(2)
 
+  // 参加者募集関連の状態
+  const [isRecruiting, setIsRecruiting] = useState(false)
+  const [playerClass, setPlayerClass] = useState("")
+  const [recruitmentCount, setRecruitmentCount] = useState(1)
+  const [cafeGames, setCafeGames] = useState([])
+  const [selectedCafeGames, setSelectedCafeGames] = useState([])
+  const [cafeGameSearch, setCafeGameSearch] = useState("")
+
   const weeks = useMemo(() => {
     if (!currentDate) return []
     return Array.from({ length: 5 }, (_, i) => {
@@ -197,6 +206,28 @@ export default function CafeReservation() {
     fetchReservations()
   }, [])
 
+  // プレイヤークラスが変更されたときにゲームリストを取得
+  useEffect(() => {
+    if (playerClass && selectedCafe?.id) {
+      fetchCafeGames(selectedCafe.id, playerClass)
+    }
+  }, [playerClass, selectedCafe])
+
+  const fetchCafeGames = async (cafeId, playerClass) => {
+    if (!cafeId || !playerClass) return
+
+    try {
+      const token = getToken()
+      const response = await axios.get(`http://localhost:8000/match/api/cafe_have_games/${cafeId}/${playerClass}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setCafeGames(response.data)
+    } catch (error) {
+      console.error("カフェのゲームリストの取得中にエラーが発生しました:", error)
+      setError("カフェのゲームリストの取得中にエラーが発生しました")
+    }
+  }
+
   const isWithinBusinessHours = (day, hour) => {
     if (!cafeData) return false
 
@@ -239,6 +270,11 @@ export default function CafeReservation() {
     setReservationStartTime("")
     setReservationEndTime("")
     setNumberOfPeople(2)
+    setIsRecruiting(false)
+    setPlayerClass("")
+    setRecruitmentCount(1)
+    setSelectedCafeGames([])
+    setCafeGameSearch("")
     setError("")
   }
 
@@ -285,6 +321,31 @@ export default function CafeReservation() {
     }
   }
 
+  const handlePlayerClassChange = (value) => {
+    setPlayerClass(value)
+    setSelectedCafeGames([]) // クラス変更時に選択をリセット
+  }
+
+  const handleAddGame = (gameId) => {
+    if (!selectedCafeGames.includes(gameId)) {
+      setSelectedCafeGames([...selectedCafeGames, gameId])
+    }
+  }
+
+  const handleRemoveGame = (gameId) => {
+    setSelectedCafeGames(selectedCafeGames.filter((id) => id !== gameId))
+  }
+
+  const filteredCafeGames = useMemo(() => {
+    if (!cafeGames.length) return []
+
+    // 検索フィルタリング
+    const filtered = cafeGames.filter((game) => game.name.toLowerCase().includes(cafeGameSearch.toLowerCase()))
+
+    // 既に選択されているゲームを除外
+    return filtered.filter((game) => !selectedCafeGames.includes(game.id))
+  }, [cafeGames, cafeGameSearch, selectedCafeGames])
+
   const handleReservationSubmit = async () => {
     setError("")
 
@@ -316,6 +377,24 @@ export default function CafeReservation() {
       }
     }
 
+    // 参加者募集の検証
+    if (isRecruiting) {
+      if (!playerClass) {
+        setError("プレイヤークラスを選択してください")
+        return
+      }
+
+      if (recruitmentCount < 1) {
+        setError("募集人数は1人以上に設定してください")
+        return
+      }
+
+      if (selectedCafeGames.length === 0) {
+        setError("少なくとも1つのゲームを選択してください")
+        return
+      }
+    }
+
     const reservationData = {
       cafe: selectedCafe.id,
       date: format(reservationDate, "yyyy-MM-dd"),
@@ -323,6 +402,11 @@ export default function CafeReservation() {
       startTime: reservationStartTime,
       endTime: reservationEndTime,
       numberOfPeople: numberOfPeople,
+      is_recruiting: isRecruiting,
+      max_participants: isRecruiting ? numberOfPeople + recruitmentCount : numberOfPeople,
+      cafe_games: selectedCafeGames,
+      personal_games: [], // カフェからの予約では個人のゲームは使用しない
+      game_class: playerClass,
     }
 
     try {
@@ -341,6 +425,10 @@ export default function CafeReservation() {
       setReservationStartTime("")
       setReservationEndTime("")
       setNumberOfPeople(2)
+      setIsRecruiting(false)
+      setPlayerClass("")
+      setRecruitmentCount(1)
+      setSelectedCafeGames([])
       setError("")
 
       const new_reservation = await axios.get("http://localhost:8000/cafes/api/reservations/", {
@@ -460,7 +548,7 @@ export default function CafeReservation() {
       </Tabs>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>予約</DialogTitle>
           </DialogHeader>
@@ -566,10 +654,130 @@ export default function CafeReservation() {
                 type="number"
                 value={numberOfPeople}
                 onChange={(e) => setNumberOfPeople(Number.parseInt(e.target.value))}
-                min={2}
+                min={1}
                 className="col-span-3"
               />
             </div>
+
+            {/* 参加者募集セクション */}
+            {(selectedCourse === "afternoon" || selectedCourse === "evening") && (
+              <>
+                <div className="flex flex-col items-center justify-center py-4 border-t border-b my-2">
+                  <div className="flex items-center gap-4 mb-4">
+                    <Label htmlFor="recruiting" className="text-base font-medium">
+                      参加者を募集する
+                    </Label>
+                    <Switch
+                      id="recruiting"
+                      checked={isRecruiting}
+                      onCheckedChange={setIsRecruiting}
+                      className="scale-125"
+                    />
+                  </div>
+                </div>
+
+                {isRecruiting && (
+                  <>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="playerClass" className="text-right">
+                        クラス
+                      </Label>
+                      <Select onValueChange={handlePlayerClassChange} value={playerClass}>
+                        <SelectTrigger className="w-[280px]">
+                          <SelectValue placeholder="クラスを選択してください" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="light">軽量級</SelectItem>
+                          <SelectItem value="medium">中量級</SelectItem>
+                          <SelectItem value="heavy">重量級</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="recruitmentCount" className="text-right">
+                        募集人数
+                      </Label>
+                      <Input
+                        id="recruitmentCount"
+                        type="number"
+                        value={recruitmentCount}
+                        onChange={(e) => setRecruitmentCount(Number.parseInt(e.target.value))}
+                        min={1}
+                        className="col-span-3"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-start gap-4">
+                      <Label className="text-right pt-2">ゲーム</Label>
+                      <div className="col-span-3">
+                        <div className="space-y-4">
+                          {selectedCafeGames.length > 0 && (
+                            <div>
+                              <Label className="mb-2 block">選択したゲーム</Label>
+                              <div className="space-y-1 mb-4">
+                                {selectedCafeGames.map((gameId) => {
+                                  const game = cafeGames.find((g) => g.id === gameId)
+                                  return (
+                                    <div
+                                      key={`cafe-${gameId}`}
+                                      className="flex items-center justify-between p-2 bg-muted rounded-md"
+                                    >
+                                      <span>{game?.name} (カフェ)</span>
+                                      <Button variant="ghost" size="sm" onClick={() => handleRemoveGame(gameId)}>
+                                        削除
+                                      </Button>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-4">
+                            <div>
+                              <Input
+                                placeholder="カフェのゲームを検索..."
+                                value={cafeGameSearch}
+                                onChange={(e) => setCafeGameSearch(e.target.value)}
+                                className="mb-2"
+                              />
+                              <div className="max-h-[30vh] overflow-y-auto border rounded-md">
+                                {filteredCafeGames.length > 0 ? (
+                                  <div className="p-1">
+                                    {filteredCafeGames.map((game) => (
+                                      <div
+                                        key={game.id}
+                                        className="flex items-center justify-between p-2 hover:bg-muted rounded-md cursor-pointer"
+                                        onClick={() => handleAddGame(game.id)}
+                                      >
+                                        <span>{game.name}</span>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleAddGame(game.id)
+                                          }}
+                                        >
+                                          追加
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="p-2 text-center text-muted-foreground">
+                                    {cafeGameSearch ? "該当するゲームがありません" : "すべてのゲームが選択されています"}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button type="submit" onClick={handleReservationSubmit}>
@@ -581,3 +789,4 @@ export default function CafeReservation() {
     </div>
   )
 }
+

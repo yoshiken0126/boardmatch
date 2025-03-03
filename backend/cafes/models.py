@@ -134,7 +134,7 @@ class TableTimeSlot(models.Model):
 
 class Reservation(models.Model):
     cafe = models.ForeignKey('accounts.BoardGameCafe', on_delete=models.CASCADE)  # どのカフェで予約か
-    count = models.PositiveIntegerField(default=4)
+    count = models.IntegerField(default=4)
     participant = models.ManyToManyField('accounts.CustomUser',through='Participant')
     max_participants = models.PositiveIntegerField(default=4)  # 最大参加人数を示すフィールド
     timeslot = models.ManyToManyField('cafes.TableTimeSlot',through='ReservationTimeSlot')
@@ -195,27 +195,61 @@ class ReservationTimeSlot(models.Model):
     class Meta:
         unique_together = ('reservation', 'timeslot')  # 同じ予約とタイムスロットの組み合わせを一意に
 
+
 class Message(models.Model):
     reservation = models.ForeignKey('cafes.Reservation', on_delete=models.CASCADE, related_name='messages')  # メッセージが紐づく予約
     sender = models.ForeignKey('accounts.BaseUser', on_delete=models.CASCADE, null=True, blank=True)  # ユーザーが送信したメッセージ
     sender_is_staff = models.BooleanField(default=False)  # スタッフが送信したメッセージかどうか
     content = models.TextField()  # メッセージの内容
     sent_at = models.DateTimeField(auto_now_add=True)  # メッセージ送信日時
-    read_by = models.ManyToManyField(
-        'accounts.CustomUser', 
-        related_name='read_messages', 
-        blank=True
-    )  # メッセージを読んだユーザー
-    read_by_staff = models.ManyToManyField(  # スタッフがメッセージを読んだか追跡する
-        'accounts.CafeStaff',
-        related_name='read_messages',
-        blank=True
-    )
-    is_deleted = models.BooleanField(default=False)  # メッセージが削除されたかどうか
-
+    
+    # 誰に表示されるかを制御するフィールド
+    recipient = models.ManyToManyField('accounts.BaseUser', related_name='direct_messages', blank=True)  # 特定のユーザー宛てのメッセージ
+    is_public = models.BooleanField(default=True)  # 予約の全員に表示するメッセージかどうか
+    
+    read_by = models.ManyToManyField('accounts.CustomUser', related_name='read_messages', blank=True)  # メッセージを読んだユーザー
+    read_by_staff = models.ManyToManyField('accounts.CafeStaff',related_name='read_messages',blank=True)
+    is_proposal = models.BooleanField(default=False)  # ゲームの提案かどうか
+    is_system_message = models.BooleanField(default=False)  # システムメッセージかどうか
+    
     def __str__(self):
         sender_name = "スタッフ" if self.sender_is_staff else str(self.sender)
         return f"Message from {sender_name} on {self.sent_at}"
 
+    def get_game_proposal(self):
+        """is_proposalがTrueの場合に関連するGameProposalを取得"""
+        if self.is_proposal:
+            return GameProposal.objects.filter(message=self).first()  # GameProposalを取得
+        return None
+    
+        
     class Meta:
         ordering = ['sent_at']  # 送信日時順に並べる
+
+
+class GameProposal(models.Model):
+    message = models.ForeignKey('Message', on_delete=models.CASCADE)  # ゲーム提案に紐づくメッセージ
+    game = models.ForeignKey('accounts.BoardGame', on_delete=models.CASCADE)  # 提案されたゲーム
+    participants = models.ManyToManyField('accounts.CustomUser', related_name='game_proposals')  # 承認した参加者
+    instructors = models.ManyToManyField(
+        'accounts.BaseUser', 
+        related_name='explained_game_proposals', 
+        through='GameProposalInstructor', 
+        blank=True
+    )  # ルール説明者（Instructor）とその受け入れ状態を管理するためのフィールド
+    
+    
+    def __str__(self):
+        return f"Game Proposal for message {self.message.id} - Game: {self.game.name}"
+    
+    def is_game_accepted(self):
+        # ルール説明者の中で一人でも説明を受け入れた場合にゲームが決定する
+        return self.gameproposalinstructor_set.filter(is_accepted=True).exists()
+
+class GameProposalInstructor(models.Model):
+    game_proposal = models.ForeignKey('GameProposal', on_delete=models.CASCADE)  # ゲーム提案に紐づく
+    instructor = models.ForeignKey('accounts.BaseUser', on_delete=models.CASCADE)  # ルール説明者（スタッフ）
+    is_accepted = models.BooleanField(default=False)  # ルール説明を受け入れたかどうか
+    
+    def __str__(self):
+        return f"Instructor {self.instructor} accepted: {self.is_accepted} for proposal {self.game_proposal.id}"

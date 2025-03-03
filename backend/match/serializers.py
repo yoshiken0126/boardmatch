@@ -176,9 +176,9 @@ class ReservationSerializer(serializers.ModelSerializer):
         cafe = validated_data['cafe']
         count = validated_data['numberOfPeople']
 
-        personal_games = validated_data['personal_games']
+        personal_games = validated_data.get('personal_games', [])
         print(personal_games)
-        cafe_games = validated_data['cafe_games']
+        cafe_games = validated_data.get('cafe_games', [])
         print(cafe_games)
         
         # 予約が空いているテーブルを選ぶロジック
@@ -211,6 +211,7 @@ class ReservationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('空いているテーブルが見つかりません')
         
         # ユーザー情報の取得
+        
         user = self.context['request'].user
         reservation_type = 'staff' if user.user_type == 'staff_user' else 'user'
         
@@ -227,8 +228,8 @@ class ReservationSerializer(serializers.ModelSerializer):
 
         selected_games = validated_data.get('cafe_games', []) + validated_data.get('personal_games', [])
 
-
-        customuser = CustomUser.objects.get(id=user.id)
+        if user.user_type == 'custom_user':
+            customuser = CustomUser.objects.get(id=user.id)
     
         for game in selected_games:
             PlayGame.objects.create(

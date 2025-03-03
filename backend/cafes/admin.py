@@ -1,4 +1,4 @@
-from cafes.models import CafeGameRelation, StaffGameRelation,Message,PlayGame
+from cafes.models import CafeGameRelation, StaffGameRelation,Message,PlayGame,GameProposal, GameProposalInstructor
 from django.contrib import admin
 from django.utils import timezone
 
@@ -99,15 +99,51 @@ class ReservationTimeSlotAdmin(admin.ModelAdmin):
 
 
 
+
 class MessageAdmin(admin.ModelAdmin):
-    # 管理画面で表示するカラム
-    list_display = ('reservation', 'sender','content', 'sent_at', 'sender_is_staff', 'is_deleted')
-    
-    # メッセージ送信日時で並べ替え
+    list_display = (
+        'reservation', 'sender', 'sender_is_staff', 'content', 'sent_at',
+        'is_public', 'get_recipient_list', 'get_read_by_count', 'get_read_by_staff_count', 'is_proposal', 'is_system_message'
+    )
+    list_filter = ('sender_is_staff', 'is_public', 'is_proposal', 'is_system_message', 'sent_at')
+    search_fields = ('content', 'sender__username', 'reservation__id')
+    raw_id_fields = ('reservation', 'sender', 'recipient')
+    date_hierarchy = 'sent_at'
     ordering = ('-sent_at',)
     
-    # 検索機能
-    search_fields = ('reservation__id', 'sender__username', 'content')
+    # 受信者のリストを表示するためのカスタムメソッド
+    def get_recipient_list(self, obj):
+        return ", ".join([str(user) for user in obj.recipient.all()])
+    get_recipient_list.short_description = 'Recipients'  # フィールド名を変更
+
+    # メッセージが読まれたユーザーの数を表示
+    def get_read_by_count(self, obj):
+        return obj.read_by.count()
+    get_read_by_count.short_description = 'Read by Users'
+
+    # スタッフによって読まれたメッセージ数を表示
+    def get_read_by_staff_count(self, obj):
+        return obj.read_by_staff.count()
+    get_read_by_staff_count.short_description = 'Read by Staff'
+
+
+
+
+class GameProposalAdmin(admin.ModelAdmin):
+    list_display = ('message', 'game', 'is_game_accepted')
+    list_filter = ('participants',)
+    search_fields = ('game__name', 'message__content')
+    raw_id_fields = ('message', 'game','instructors')
+    filter_horizontal = ('participants',)
+
+class GameProposalInstructorAdmin(admin.ModelAdmin):
+    list_display = ('game_proposal', 'instructor', 'is_accepted')
+    list_filter = ('is_accepted',)
+    raw_id_fields = ('game_proposal', 'instructor')
+
+
+
+
 
 
 
@@ -118,9 +154,10 @@ admin.site.register(TableTimeSlot, TableTimeSlotAdmin)
 admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(Participant, ParticipantAdmin)
 admin.site.register(ReservationTimeSlot, ReservationTimeSlotAdmin)
-admin.site.register(Message, MessageAdmin)
 admin.site.register(PlayGame, PlayGameAdmin)
-
+admin.site.register(Message, MessageAdmin)
+admin.site.register(GameProposal, GameProposalAdmin)
+admin.site.register(GameProposalInstructor, GameProposalInstructorAdmin)
 
 
 

@@ -191,6 +191,10 @@ export default function Home() {
 
     // 参加者募集のバリデーション
     if (isRecruiting) {
+      if (!playerClass) {
+        setError("プレイヤークラスを選択してください")
+        return
+      }
       if (recruitmentCount < 1) {
         setError("募集人数を1人以上に設定してください")
         return
@@ -198,11 +202,6 @@ export default function Home() {
 
       if (selectedCafeGames.length === 0 && selectedPersonalGames.length === 0) {
         setError("少なくとも1つのゲームを選択してください")
-        return
-      }
-
-      if (!playerClass) {
-        setError("プレイヤークラスを選択してください")
         return
       }
     }
@@ -247,8 +246,30 @@ export default function Home() {
       window.location.reload()
     } catch (error) {
       console.error("予約の送信中にエラーが発生しました:", error)
-      console.log(error.response.data);
-      setError("予約の送信中にエラーが発生しました")
+
+      if (error.response?.data) {
+        if (typeof error.response.data === "string") {
+          // エラーメッセージが文字列の場合
+          setError(error.response.data)
+        } else if (error.response.data.detail) {
+          // 詳細なエラーメッセージがある場合
+          setError(error.response.data.detail)
+        } else if (error.response.data.non_field_errors) {
+          // フィールドに関連しないエラーの場合
+          setError(error.response.data.non_field_errors[0])
+        } else {
+          // その他のエラーの場合、最初のエラーメッセージを表示
+          const firstErrorKey = Object.keys(error.response.data)[0]
+          const firstErrorMessage = error.response.data[firstErrorKey]
+          setError(`${firstErrorKey}: ${firstErrorMessage}`)
+        }
+      } else if (error.message) {
+        // エラーオブジェクトにmessageプロパティがある場合
+        setError(error.message)
+      } else {
+        // それ以外の場合、デフォルトのエラーメッセージを表示
+        setError("予約の送信中に予期せぬエラーが発生しました。もう一度お試しください。")
+      }
     }
   }
 
@@ -349,7 +370,7 @@ export default function Home() {
     setSelectedCafeGames([])
     setSelectedPersonalGames([])
     setAlertMessage(
-      "プレイヤークラスが変更されました。選択されていたゲームがリセットされました。新しいクラスに応じてゲームを選び直してください。",
+      "",
     )
     if (selectedCafe) {
       await fetchGamesByPlayerClass(selectedCafe.id, newClass)
@@ -568,7 +589,7 @@ export default function Home() {
                 type="number"
                 value={numberOfPeople}
                 onChange={(e) => setNumberOfPeople(Number.parseInt(e.target.value))}
-                min={2}
+                min={1}
                 className="col-span-3"
               />
             </div>
@@ -591,21 +612,8 @@ export default function Home() {
                 {isRecruiting && (
                   <>
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="recruitmentCount" className="text-right">
-                        募集人数
-                      </Label>
-                      <Input
-                        id="recruitmentCount"
-                        type="number"
-                        value={recruitmentCount}
-                        onChange={(e) => setRecruitmentCount(Number.parseInt(e.target.value))}
-                        min={1}
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="playerClass" className="text-right">
-                        プレイヤークラス
+                        クラス
                       </Label>
                       <Select onValueChange={handlePlayerClassChange} value={playerClass}>
                         <SelectTrigger className="w-[280px]">
@@ -618,8 +626,21 @@ export default function Home() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="recruitmentCount" className="text-right">
+                        募集人数
+                      </Label>
+                      <Input
+                        id="recruitmentCount"
+                        type="number"
+                        value={recruitmentCount}
+                        onChange={(e) => setRecruitmentCount(Number.parseInt(e.target.value))}
+                        min={1}
+                        className="col-span-3"
+                      />
+                    </div>
                     <div className="grid grid-cols-4 items-start gap-4">
-                      <Label className="text-right pt-2">プレイするゲーム</Label>
+                      <Label className="text-right pt-2">ゲーム</Label>
                       <div className="col-span-3">
                         <div className="space-y-4">
                           {(selectedCafeGames.length > 0 || selectedPersonalGames.length > 0) && (

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import CafeTable
-from accounts.models import BoardGameCafe,CustomUser
+from accounts.models import BoardGameCafe,CustomUser,CafeStaff
 
 class CafeTableSerializer(serializers.ModelSerializer):
     class Meta:
@@ -82,6 +82,36 @@ class ReservationSerializer(serializers.ModelSerializer):
         fields = ['id', 'cafe', 'cafe_name', 'table', 'count', 'reserved_at', 'reservation_type', 'start_time', 'end_time', 'participants','max_participants', 'is_active','is_recruiting','game_class','choice_game','play_game']
     
 
+
+from .models import Message, SuggestGame, SuggestGameInstructor
+
+class SuggestGameInstructorSerializer(serializers.ModelSerializer):
+    instructor = serializers.StringRelatedField()  # ルール説明者（スタッフ）
+
+    class Meta:
+        model = SuggestGameInstructor
+        fields = ['instructor', 'is_accepted']
+    
+    
+    def get_instructor(self, obj):
+        """
+        インストラクター（スタッフ）の情報を取得
+        """
+        return {
+            'id': obj.instructor.id,
+            'username': obj.instructor.username
+        }
+
+
+class SuggestGameSerializer(serializers.ModelSerializer):
+    suggest_game = serializers.StringRelatedField()  # 提案されたゲーム名
+    participants = serializers.StringRelatedField(many=True)  # 承認した参加者
+    instructors = SuggestGameInstructorSerializer(many=True)  # ルール説明者の情報（および受け入れ状態）
+
+    class Meta:
+        model = SuggestGame
+        fields = ['suggest_game', 'participants', 'instructors']
+
 class MessageSerializer(serializers.ModelSerializer):
     reservation = serializers.StringRelatedField()  # 予約の情報（文字列表示）
     sender = serializers.StringRelatedField()  # メッセージ送信者
@@ -89,10 +119,11 @@ class MessageSerializer(serializers.ModelSerializer):
     sent_at = serializers.DateTimeField()  # メッセージ送信日時
     is_user_sender = serializers.SerializerMethodField()  # ログイン中のユーザーが送信者かどうか判定
     sender_profile_picture = serializers.SerializerMethodField()  # 送信者のプロフィール画像
+    suggest_game = serializers.SerializerMethodField()  # ゲーム提案の情報（関連があれば）
 
     class Meta:
         model = Message
-        fields = ['reservation', 'sender', 'content', 'sent_at', 'is_user_sender', 'sender_profile_picture']
+        fields = ['reservation', 'sender','is_public','is_system_message','is_rule_approval','is_suggest', 'content', 'sent_at', 'is_user_sender', 'sender_profile_picture', 'suggest_game']
 
     def get_is_user_sender(self, obj):
         """
@@ -109,10 +140,22 @@ class MessageSerializer(serializers.ModelSerializer):
         sender = obj.sender
         customuser = CustomUser.objects.get(username=sender)
     
-    # sender が BaseUser のインスタンスの場合、CustomUser にキャストして profile_picture を取得
+        # sender が BaseUser のインスタンスの場合、CustomUser にキャストして profile_picture を取得
         if isinstance(customuser, CustomUser):
             return customuser.profile_picture.url if customuser.profile_picture else None
     
+        return None
+
+    
+
+    def get_suggest_game(self, obj):
+        """
+        メッセージに関連するゲーム提案を取得
+        """
+        if obj.is_suggest:
+            suggest_game = obj.get_game_suggest()  # SuggestGame を取得するメソッド
+            if suggest_game:
+                return SuggestGameSerializer(suggest_game).data
         return None
 
 

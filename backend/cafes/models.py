@@ -204,52 +204,54 @@ class Message(models.Model):
     sent_at = models.DateTimeField(auto_now_add=True)  # メッセージ送信日時
     
     # 誰に表示されるかを制御するフィールド
-    recipient = models.ManyToManyField('accounts.BaseUser', related_name='direct_messages', blank=True)  # 特定のユーザー宛てのメッセージ
+    receiver = models.ManyToManyField('accounts.BaseUser', related_name='direct_messages', blank=True)  # 特定のユーザー宛てのメッセージ
     is_public = models.BooleanField(default=True)  # 予約の全員に表示するメッセージかどうか
     
     read_by = models.ManyToManyField('accounts.CustomUser', related_name='read_messages', blank=True)  # メッセージを読んだユーザー
-    read_by_staff = models.ManyToManyField('accounts.CafeStaff',related_name='read_messages',blank=True)
-    is_proposal = models.BooleanField(default=False)  # ゲームの提案かどうか
+    read_by_staff = models.ManyToManyField('accounts.CafeStaff', related_name='read_messages', blank=True)
+    is_suggest = models.BooleanField(default=False)  # ゲームの提案かどうか
+    is_rule_approval = models.BooleanField(default=False)
     is_system_message = models.BooleanField(default=False)  # システムメッセージかどうか
+
     
     def __str__(self):
         sender_name = "スタッフ" if self.sender_is_staff else str(self.sender)
         return f"Message from {sender_name} on {self.sent_at}"
 
-    def get_game_proposal(self):
-        """is_proposalがTrueの場合に関連するGameProposalを取得"""
-        if self.is_proposal:
-            return GameProposal.objects.filter(message=self).first()  # GameProposalを取得
+    def get_game_suggest(self):
+        """is_suggestがTrueの場合に関連するSuggestGameを取得"""
+        if self.is_suggest:
+            return SuggestGame.objects.filter(message=self).first()  # SuggestGameを取得
         return None
     
-        
+    
     class Meta:
         ordering = ['sent_at']  # 送信日時順に並べる
 
 
-class GameProposal(models.Model):
+class SuggestGame(models.Model):
     message = models.ForeignKey('Message', on_delete=models.CASCADE)  # ゲーム提案に紐づくメッセージ
-    game = models.ForeignKey('accounts.BoardGame', on_delete=models.CASCADE)  # 提案されたゲーム
-    participants = models.ManyToManyField('accounts.CustomUser', related_name='game_proposals')  # 承認した参加者
+    suggest_game = models.ForeignKey('accounts.BoardGame', on_delete=models.CASCADE)  # 提案されたゲーム
+    participants = models.ManyToManyField('accounts.CustomUser', related_name='suggest_games')  # 承認した参加者
     instructors = models.ManyToManyField(
         'accounts.BaseUser', 
-        related_name='explained_game_proposals', 
-        through='GameProposalInstructor', 
+        related_name='explained_suggest_games', 
+        through='SuggestGameInstructor', 
         blank=True
     )  # ルール説明者（Instructor）とその受け入れ状態を管理するためのフィールド
     
-    
     def __str__(self):
-        return f"Game Proposal for message {self.message.id} - Game: {self.game.name}"
+        return f"Suggest Game for message {self.message.id} - Game: {self.suggest_game.name}"
     
     def is_game_accepted(self):
         # ルール説明者の中で一人でも説明を受け入れた場合にゲームが決定する
-        return self.gameproposalinstructor_set.filter(is_accepted=True).exists()
+        return self.suggestgameinstructor_set.filter(is_accepted=True).exists()
 
-class GameProposalInstructor(models.Model):
-    game_proposal = models.ForeignKey('GameProposal', on_delete=models.CASCADE)  # ゲーム提案に紐づく
+
+class SuggestGameInstructor(models.Model):
+    suggest_game = models.ForeignKey('SuggestGame', on_delete=models.CASCADE)  # ゲーム提案に紐づく
     instructor = models.ForeignKey('accounts.BaseUser', on_delete=models.CASCADE)  # ルール説明者（スタッフ）
     is_accepted = models.BooleanField(default=False)  # ルール説明を受け入れたかどうか
     
     def __str__(self):
-        return f"Instructor {self.instructor} accepted: {self.is_accepted} for proposal {self.game_proposal.id}"
+        return f"Instructor {self.instructor} accepted: {self.is_accepted} for suggest {self.suggest_game.id}"

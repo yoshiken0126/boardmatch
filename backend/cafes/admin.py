@@ -1,4 +1,4 @@
-from cafes.models import CafeGameRelation, StaffGameRelation,Message,PlayGame,GameProposal, GameProposalInstructor
+from cafes.models import CafeGameRelation, StaffGameRelation,Message,PlayGame,SuggestGame, SuggestGameInstructor
 from django.contrib import admin
 from django.utils import timezone
 
@@ -99,47 +99,27 @@ class ReservationTimeSlotAdmin(admin.ModelAdmin):
 
 
 
+from django.contrib import admin
+from .models import Message, SuggestGame, SuggestGameInstructor
 
+# Messageモデルの管理画面設定
 class MessageAdmin(admin.ModelAdmin):
-    list_display = (
-        'reservation', 'sender', 'sender_is_staff', 'content', 'sent_at',
-        'is_public', 'get_recipient_list', 'get_read_by_count', 'get_read_by_staff_count', 'is_proposal', 'is_system_message'
-    )
-    list_filter = ('sender_is_staff', 'is_public', 'is_proposal', 'is_system_message', 'sent_at')
-    search_fields = ('content', 'sender__username', 'reservation__id')
-    raw_id_fields = ('reservation', 'sender', 'recipient')
-    date_hierarchy = 'sent_at'
-    ordering = ('-sent_at',)
-    
-    # 受信者のリストを表示するためのカスタムメソッド
-    def get_recipient_list(self, obj):
-        return ", ".join([str(user) for user in obj.recipient.all()])
-    get_recipient_list.short_description = 'Recipients'  # フィールド名を変更
+    list_display = ('reservation', 'sender', 'sent_at', 'is_public')  # 必要最小限の表示
+    search_fields = ('content', 'reservation__id', 'sender__username')  # 簡単な検索機能
 
-    # メッセージが読まれたユーザーの数を表示
-    def get_read_by_count(self, obj):
-        return obj.read_by.count()
-    get_read_by_count.short_description = 'Read by Users'
+# SuggestGameモデルの管理画面設定
+class SuggestGameAdmin(admin.ModelAdmin):
+    list_display = ('message', 'suggest_game')  # 最小限の表示
+    search_fields = ('message__content', 'suggest_game__name')  # 簡単な検索機能
 
-    # スタッフによって読まれたメッセージ数を表示
-    def get_read_by_staff_count(self, obj):
-        return obj.read_by_staff.count()
-    get_read_by_staff_count.short_description = 'Read by Staff'
+# SuggestGameInstructorモデルの管理画面設定
+class SuggestGameInstructorAdmin(admin.ModelAdmin):
+    list_display = ('suggest_game', 'instructor', 'is_accepted')  # 最小限の表示
 
-
-
-
-class GameProposalAdmin(admin.ModelAdmin):
-    list_display = ('message', 'game', 'is_game_accepted')
-    list_filter = ('participants',)
-    search_fields = ('game__name', 'message__content')
-    raw_id_fields = ('message', 'game','instructors')
-    filter_horizontal = ('participants',)
-
-class GameProposalInstructorAdmin(admin.ModelAdmin):
-    list_display = ('game_proposal', 'instructor', 'is_accepted')
-    list_filter = ('is_accepted',)
-    raw_id_fields = ('game_proposal', 'instructor')
+# 管理画面にモデルを登録
+admin.site.register(Message, MessageAdmin)
+admin.site.register(SuggestGame, SuggestGameAdmin)
+admin.site.register(SuggestGameInstructor, SuggestGameInstructorAdmin)
 
 
 
@@ -155,9 +135,6 @@ admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(Participant, ParticipantAdmin)
 admin.site.register(ReservationTimeSlot, ReservationTimeSlotAdmin)
 admin.site.register(PlayGame, PlayGameAdmin)
-admin.site.register(Message, MessageAdmin)
-admin.site.register(GameProposal, GameProposalAdmin)
-admin.site.register(GameProposalInstructor, GameProposalInstructorAdmin)
 
 
 

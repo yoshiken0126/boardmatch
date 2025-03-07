@@ -26,7 +26,7 @@ from rest_framework import permissions,viewsets
 from .filters import UserGameRelationFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from accounts.permissions import IsCustomUser,IsCustomUserOrIsStaffUser
-from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant,CafeGameRelation
+from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant,CafeGameRelation,Message,SuggestGame
 from rest_framework.decorators import action
 
 
@@ -1122,6 +1122,16 @@ def try_optimize(request):
             for user_index in group:
                 user = CustomUser.objects.get(username=userdict[user_index])
                 participant = Participant.objects.create(reservation=reservation,user=user)
+            message = Message.objects.create(reservation=reservation,is_public=False,is_system_message=True,content=
+            f'マッチングに成功しました。\n場所:{cafe.name}\n日時:\n遊びたいゲームを選択してください。')
+
+
+            suggest_games = BoardGame.objects.all()
+            for suggest_game in suggest_games:
+                message = Message.objects.create(reservation=reservation,is_public=False,is_suggest=True)
+                game = SuggestGame.objects.create(message=message,suggest_game=suggest_game)
+            
+
 
             # グループ内の各ユーザーの組み合わせに対してUserRelationを作成
             for i in range(len(group)):

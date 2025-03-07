@@ -83,34 +83,53 @@ class ReservationSerializer(serializers.ModelSerializer):
     
 
 
-from .models import Message, SuggestGame, SuggestGameInstructor
+from .models import Message, SuggestGame, SuggestGameInstructor,SuggestGameProvider,SuggestGameParticipant
+from match.serializers import BoardGameSerializer
+
 
 class SuggestGameInstructorSerializer(serializers.ModelSerializer):
-    instructor = serializers.StringRelatedField()  # ルール説明者（スタッフ）
+    # `instructor`の`username`を文字列として取得する
+    instructor = serializers.StringRelatedField()
 
     class Meta:
         model = SuggestGameInstructor
         fields = ['instructor', 'is_accepted']
     
-    
-    def get_instructor(self, obj):
-        """
-        インストラクター（スタッフ）の情報を取得
-        """
-        return {
-            'id': obj.instructor.id,
-            'username': obj.instructor.username
-        }
+class SuggestGameProviderSerializer(serializers.ModelSerializer):
+    provider = serializers.StringRelatedField()
 
+    class Meta:
+        model = SuggestGameProvider
+        fields = ['provider']
+
+class SuggestGameParticipantSerializer(serializers.ModelSerializer):
+    # `participant`の`username`を文字列として取得する
+    participant = serializers.StringRelatedField()  # `participant`の`__str__`を使用
+
+    class Meta:
+        model = SuggestGameParticipant
+        fields = ['participant', 'is_accepted']
 
 class SuggestGameSerializer(serializers.ModelSerializer):
-    suggest_game = serializers.StringRelatedField()  # 提案されたゲーム名
-    participants = serializers.StringRelatedField(many=True)  # 承認した参加者
-    instructors = SuggestGameInstructorSerializer(many=True)  # ルール説明者の情報（および受け入れ状態）
+    suggest_game = serializers.SerializerMethodField()# 提案されたゲーム名
+    participants = SuggestGameParticipantSerializer(source='suggestgameparticipant_set', many=True)  # 承認した参加者
+    instructors = SuggestGameInstructorSerializer(source='suggestgameinstructor_set', many=True)  # 明示的に関連名を指定
+    providers = SuggestGameProviderSerializer(source='suggestgameprovider_set', many=True)  # 明示的に関連名を指定
 
     class Meta:
         model = SuggestGame
-        fields = ['suggest_game', 'participants', 'instructors']
+        fields = ['suggest_game', 'participants', 'instructors','providers', 'count_want_to_play']
+
+    def get_suggest_game(self, obj):
+        """
+        提案されたボードゲームの詳細情報を取得
+        """
+        if obj.suggest_game:
+            # BoardGameのシリアライザを使用してゲームの詳細情報を取得
+            return BoardGameSerializer(obj.suggest_game).data
+        return None
+
+    
 
 
 
@@ -125,7 +144,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['reservation', 'sender','is_public','is_system_message','is_rule_approval','is_suggest', 'content', 'sent_at', 'is_user_sender', 'sender_profile_picture', 'suggest_game']
+        fields = ['reservation', 'sender','is_public','is_system_message','is_rule_approval','is_suggest', 'content', 'sent_at', 'is_user_sender', 'sender_profile_picture', 'suggest_game','receiver']
 
     def get_is_user_sender(self, obj):
         """
@@ -139,7 +158,12 @@ class MessageSerializer(serializers.ModelSerializer):
         メッセージ送信者のプロフィール画像URLを取得する
         BaseUser（親クラス）の場合はCustomUserにキャストしてアクセス
         """
+
         sender = obj.sender
+
+        if sender is None:  # senderがNoneの場合
+            return None  # または、デフォルト画像のURLを返すことも可能
+
         customuser = CustomUser.objects.get(username=sender)
     
         # sender が BaseUser のインスタンスの場合、CustomUser にキャストして profile_picture を取得

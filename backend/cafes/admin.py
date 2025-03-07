@@ -1,4 +1,4 @@
-from cafes.models import CafeGameRelation, StaffGameRelation,Message,PlayGame,SuggestGame, SuggestGameInstructor
+from cafes.models import CafeGameRelation, StaffGameRelation,Message,PlayGame,SuggestGame, SuggestGameInstructor,SuggestGameProvider,SuggestGameParticipant
 from django.contrib import admin
 from django.utils import timezone
 
@@ -116,10 +116,21 @@ class SuggestGameAdmin(admin.ModelAdmin):
 class SuggestGameInstructorAdmin(admin.ModelAdmin):
     list_display = ('suggest_game', 'instructor', 'is_accepted')  # 最小限の表示
 
+class SuggestGameProviderAdmin(admin.ModelAdmin):
+    list_display = ('suggest_game', 'provider')  # 必要なフィールドを表示
+
+class SuggestGameParticipantAdmin(admin.ModelAdmin):
+    list_display = ('suggest_game', 'participant', 'is_accepted')  # 必要なフィールドを表示
+
+
+
+
 # 管理画面にモデルを登録
 admin.site.register(Message, MessageAdmin)
 admin.site.register(SuggestGame, SuggestGameAdmin)
 admin.site.register(SuggestGameInstructor, SuggestGameInstructorAdmin)
+admin.site.register(SuggestGameProvider, SuggestGameProviderAdmin)
+admin.site.register(SuggestGameParticipant, SuggestGameParticipantAdmin)
 
 
 

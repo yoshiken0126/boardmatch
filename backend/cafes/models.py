@@ -200,7 +200,7 @@ class Message(models.Model):
     reservation = models.ForeignKey('cafes.Reservation', on_delete=models.CASCADE, related_name='messages')  # メッセージが紐づく予約
     sender = models.ForeignKey('accounts.BaseUser', on_delete=models.CASCADE, null=True, blank=True)  # ユーザーが送信したメッセージ
     sender_is_staff = models.BooleanField(default=False)  # スタッフが送信したメッセージかどうか
-    content = models.TextField()  # メッセージの内容
+    content = models.TextField(null=True,blank=True)  # メッセージの内容
     sent_at = models.DateTimeField(auto_now_add=True)  # メッセージ送信日時
     
     # 誰に表示されるかを制御するフィールド
@@ -232,14 +232,10 @@ class Message(models.Model):
 class SuggestGame(models.Model):
     message = models.ForeignKey('Message', on_delete=models.CASCADE)  # ゲーム提案に紐づくメッセージ
     suggest_game = models.ForeignKey('accounts.BoardGame', on_delete=models.CASCADE)  # 提案されたゲーム
-    participants = models.ManyToManyField('accounts.CustomUser', related_name='suggest_games')  # 承認した参加者
-    instructors = models.ManyToManyField(
-        'accounts.BaseUser', 
-        related_name='explained_suggest_games', 
-        through='SuggestGameInstructor', 
-        blank=True
-    )  # ルール説明者（Instructor）とその受け入れ状態を管理するためのフィールド
-    
+    participants = models.ManyToManyField('accounts.CustomUser', related_name='suggest_games',through='SuggestGameParticipant', blank=True)  # 承認した参加者
+    instructors = models.ManyToManyField('accounts.BaseUser', related_name='explained_suggest_games', through='SuggestGameInstructor', blank=True)  # ルール説明者（Instructor）とその受け入れ状態を管理するためのフィールド
+    providers = models.ManyToManyField('accounts.CustomUser', related_name='bring_suggest_games',through='SuggestGameProvider', blank=True)
+    count_want_to_play = models.IntegerField(default=0)
     def __str__(self):
         return f"Suggest Game for message {self.message.id} - Game: {self.suggest_game.name}"
     
@@ -255,3 +251,18 @@ class SuggestGameInstructor(models.Model):
     
     def __str__(self):
         return f"Instructor {self.instructor} accepted: {self.is_accepted} for suggest {self.suggest_game.id}"
+
+class SuggestGameProvider(models.Model):
+    suggest_game = models.ForeignKey('SuggestGame', on_delete=models.CASCADE)  # ゲーム提案に紐づく
+    provider = models.ForeignKey('accounts.CustomUser', on_delete=models.CASCADE)  # ルール説明者（スタッフ）
+    
+    def __str__(self):
+        return f"Instructor {self.provider}  for suggest {self.suggest_game.id}"
+
+class SuggestGameParticipant(models.Model):
+    suggest_game = models.ForeignKey('SuggestGame', on_delete=models.CASCADE)  # ゲーム提案に紐づく
+    participant = models.ForeignKey('accounts.CustomUser', on_delete=models.CASCADE)  # ルール説明者（スタッフ）
+    is_accepted = models.BooleanField(default=False)  # ルール説明を受け入れたかどうか
+    def __str__(self):
+        return f"Instructor {self.participant} accepted: {self.is_accepted} for suggest {self.suggest_game.id}"
+

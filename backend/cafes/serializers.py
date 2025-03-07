@@ -112,6 +112,8 @@ class SuggestGameSerializer(serializers.ModelSerializer):
         model = SuggestGame
         fields = ['suggest_game', 'participants', 'instructors']
 
+
+
 class MessageSerializer(serializers.ModelSerializer):
     reservation = serializers.StringRelatedField()  # 予約の情報（文字列表示）
     sender = serializers.StringRelatedField()  # メッセージ送信者

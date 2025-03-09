@@ -10,7 +10,7 @@ import datetime,random
 from .models import CafeTable,Message
 from .serializers import CafeTableSerializer,BoardGameCafeSerializer,MessageSerializer
 from accounts.serializers import StaffUserSerializer
-from accounts.permissions import IsStaffUser
+from accounts.permissions import IsStaffUser,IsCustomUser
 from rest_framework import viewsets
 from rest_framework.response import Response
 
@@ -78,8 +78,8 @@ class BoardGameCafeViewSet(viewsets.ModelViewSet):
 
 from rest_framework import viewsets
 from rest_framework.response import Response
-from cafes.models import Reservation
-from .serializers import ReservationSerializer
+from cafes.models import Reservation,SuggestGameParticipant
+from .serializers import ReservationSerializer,SuggestGameParticipantSerializer
 
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
@@ -145,6 +145,18 @@ class MessageViewSet(viewsets.ModelViewSet):
         # 作成したメッセージをシリアライズしてレスポンスを返す
         serializer = self.get_serializer(message)
         return Response(serializer.data)
+
+
+#遊びたい見送るを決めるやつ
+class SuggestGameParticipantViewSet(viewsets.ModelViewSet):
+    #要パフォチュー
+    queryset = SuggestGameParticipant.objects.all()
+    serializer_class = SuggestGameParticipantSerializer
+    permission_classes = [IsCustomUser]  # ユーザー認証を要求する
+
+    def perform_create(self, serializer):
+        # `create`メソッドでユーザーは自動的に処理されるため、追加処理は不要
+        serializer.save()
 
 
 

@@ -93,22 +93,53 @@ class SuggestGameInstructorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SuggestGameInstructor
-        fields = ['instructor', 'is_accepted']
+        fields = ['id','instructor', 'is_accepted']
     
 class SuggestGameProviderSerializer(serializers.ModelSerializer):
     provider = serializers.StringRelatedField()
 
     class Meta:
         model = SuggestGameProvider
-        fields = ['provider']
+        fields = ['id','provider']
 
 class SuggestGameParticipantSerializer(serializers.ModelSerializer):
     # `participant`の`username`を文字列として取得する
     participant = serializers.StringRelatedField()  # `participant`の`__str__`を使用
+    is_accepted = serializers.BooleanField()
+    suggest_game = serializers.PrimaryKeyRelatedField(queryset=SuggestGame.objects.all(), write_only=True)  # POST専用のゲームID
+    user_id = serializers.SerializerMethodField()  # user_idをシリアライズするためのフィールド
 
     class Meta:
         model = SuggestGameParticipant
-        fields = ['participant', 'is_accepted']
+        fields = ['id','participant', 'is_accepted','suggest_game','user_id']
+
+    def get_user_id(self, obj):
+        """
+        `participant` から `user_id` を取得して返す
+        """
+        if hasattr(obj, 'participant') and obj.participant:
+            return obj.participant.id
+        return None
+
+    def create(self, validated_data):
+        """
+        POSTリクエストを受けて、`is_accepted`の情報と
+        POSTしたユーザーのインスタンスを作成
+        """
+        # 現在認証されたユーザーを取得
+        user = self.context['request'].user
+        customuser = CustomUser.objects.get(id=user.id)
+        suggest_game = validated_data.get('suggest_game')
+        is_accepted = validated_data.get('is_accepted', False)
+
+        # SuggestGameParticipantの新しいインスタンスを作成
+        participant_instance = SuggestGameParticipant.objects.create(
+            participant=customuser,
+            suggest_game=suggest_game,
+            is_accepted=is_accepted
+        )
+
+        return participant_instance
 
 class SuggestGameSerializer(serializers.ModelSerializer):
     suggest_game = serializers.SerializerMethodField()# 提案されたゲーム名
@@ -118,7 +149,7 @@ class SuggestGameSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SuggestGame
-        fields = ['suggest_game', 'participants', 'instructors','providers', 'count_want_to_play']
+        fields = ['id','suggest_game', 'participants', 'instructors','providers', 'count_want_to_play']
 
     def get_suggest_game(self, obj):
         """

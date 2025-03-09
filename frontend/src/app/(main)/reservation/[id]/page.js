@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreVertical, Users, Clock, User, Check, X, BookOpen, Info } from "lucide-react"
+import { MoreVertical, Users, Clock, User, Check, X, BookOpen, Info, HelpCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
@@ -17,14 +17,54 @@ import Image from "next/image"
 const SystemMessageCard = ({ content, sentAt }) => {
   return (
     <div className="w-full my-4 px-4">
-      <div className="bg-gradient-to-r from-gray-700 to-gray-800 rounded-lg shadow-lg overflow-hidden">
-        <div className="px-4 py-3 bg-gray-800 flex items-center">
-          <Info className="h-5 w-5 text-blue-400 mr-2" />
-          <span className="text-sm font-semibold text-gray-200">システム通知</span>
+      <div className="bg-gray-100 rounded-lg shadow-sm overflow-hidden">
+        <div className="px-4 py-3 bg-gray-200 flex items-center">
+          <Info className="h-5 w-5 text-gray-600 mr-2" />
+          <span className="text-sm font-semibold text-gray-700">システム通知</span>
         </div>
-        <div className="p-4 bg-opacity-50">
-          <p className="text-sm text-gray-200 leading-relaxed">{content}</p>
-          <p className="text-xs text-gray-400 mt-2">
+        <div className="p-4">
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{content}</p>
+          <p className="text-xs text-gray-500 mt-2">
+            {new Date(sentAt).toLocaleString("ja-JP", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ルール説明担当確認メッセージコンポーネント
+const RuleApprovalCard = ({ content, sentAt, messageId, onAccept, onDecline }) => {
+  return (
+    <div className="w-full my-4 px-4">
+      <div className="bg-gray-100 rounded-lg shadow-sm overflow-hidden">
+        <div className="px-4 py-3 bg-gray-200 flex items-center">
+          <HelpCircle className="h-5 w-5 text-gray-600 mr-2" />
+          <span className="text-sm font-semibold text-gray-700">ルール説明担当確認</span>
+        </div>
+        <div className="p-4">
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{content}</p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              className="border-destructive text-destructive hover:bg-destructive/10"
+              onClick={() => onDecline(messageId)}
+            >
+              <X className="h-4 w-4 mr-1" />
+              見送る
+            </Button>
+            <Button variant="default" onClick={() => onAccept(messageId)}>
+              <Check className="h-4 w-4 mr-1" />
+              担当する
+            </Button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
             {new Date(sentAt).toLocaleString("ja-JP", {
               year: "numeric",
               month: "long",
@@ -124,20 +164,19 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
             onClick={onDecline}
           >
             <X className="h-4 w-4 mr-1" />
-            辞退する
+            見送る
           </Button>
           <Button variant="default" className="w-32" onClick={onAccept}>
             <Check className="h-4 w-4 mr-1" />
-            参加する
+            遊びたい
           </Button>
         </div>
         {instructors && instructors.length > 0 && (
           <div className="w-full mt-3 pt-3 border-t">
             <div className="flex items-center gap-2 mb-1">
               <BookOpen className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm font-medium">ルール説明可能:</p>
-            </div>
-            <div className="flex flex-wrap gap-1">
+              <p className="text-sm font-medium">説明できる人:</p>
+
               {instructors.map((instructor, i) => (
                 <Badge key={`instructor-${i}`} variant="secondary" className="flex items-center gap-1">
                   <User className="h-3 w-3" />
@@ -149,13 +188,15 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
         )}
         {participants && participants.length > 0 && (
           <div className="w-full mt-3 pt-3 border-t">
-            <p className="text-sm font-medium mb-1">参加表明者:</p>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm font-medium">遊びたい人:</p>
+
               {participants.map((participant, i) => (
-                <div key={`participant-${i}`} className="flex items-center gap-1 bg-secondary rounded-full px-2 py-1">
+                <Badge key={`participant-${i}`} variant="secondary" className="flex items-center gap-1">
                   <User className="h-3 w-3" />
-                  <span className="text-xs">{participant.participant}</span>
-                </div>
+                  <span>{participant.participant}</span>
+                </Badge>
               ))}
             </div>
           </div>
@@ -251,20 +292,29 @@ export default function ChatComponent() {
     }
   }
 
-  const handleAcceptGame = async (messageId) => {
+  const handleAcceptGame = async (message) => {
     try {
       const token = getToken()
+      // 修正: suggest_gameのIDを正しく取得する
+      const suggestGameId = message.suggest_game.id
+
+      // 新しいエンドポイントを使用してゲーム参加を登録
       await axios.post(
-        `http://localhost:8000/cafes/api/messages/${messageId}/accept_game/`,
-        {},
+        "http://localhost:8000/cafes/api/suggest_game_participants/",
+        {
+          suggest_game: suggestGameId,
+          is_accepted: true,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         },
       )
+
       alert("ゲームへの参加を承諾しました！")
-      // Refresh messages
+
+      // メッセージを再取得して画面を更新
       const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -277,20 +327,29 @@ export default function ChatComponent() {
     }
   }
 
-  const handleDeclineGame = async (messageId) => {
+  const handleDeclineGame = async (message) => {
     try {
       const token = getToken()
+      // 修正: suggest_gameのIDを正しく取得する
+      const suggestGameId = message.suggest_game.id
+
+      // 新しいエンドポイントを使用してゲーム参加を辞退
       await axios.post(
-        `http://localhost:8000/cafes/api/messages/${messageId}/decline_game/`,
-        {},
+        "http://localhost:8000/cafes/api/suggest_game_participants/",
+        {
+          suggest_game: suggestGameId,
+          is_accepted: false,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         },
       )
+
       alert("ゲームへの参加を辞退しました。")
-      // Refresh messages
+
+      // メッセージを再取得して画面を更新
       const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -300,6 +359,58 @@ export default function ChatComponent() {
     } catch (error) {
       console.error("ゲームの辞退に失敗しました:", error)
       alert("ゲームの辞退に失敗しました")
+    }
+  }
+
+  const handleAcceptRuleExplanation = async (messageId) => {
+    try {
+      const token = getToken()
+      await axios.post(
+        `http://localhost:8000/cafes/api/messages/${messageId}/accept_rule_explanation/`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+      alert("ルール説明を担当します！")
+      // Refresh messages
+      const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      setMessages(response.data || [])
+    } catch (error) {
+      console.error("ルール説明の承諾に失敗しました:", error)
+      alert("ルール説明の承諾に失敗しました")
+    }
+  }
+
+  const handleDeclineRuleExplanation = async (messageId) => {
+    try {
+      const token = getToken()
+      await axios.post(
+        `http://localhost:8000/cafes/api/messages/${messageId}/decline_rule_explanation/`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+      alert("ルール説明を見送りました。")
+      // Refresh messages
+      const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      setMessages(response.data || [])
+    } catch (error) {
+      console.error("ルール説明の辞退に失敗しました:", error)
+      alert("ルール説明の辞退に失敗しました")
     }
   }
 
@@ -334,6 +445,18 @@ export default function ChatComponent() {
     return message.receiver.includes(currentUsername)
   }
 
+  // ルール承認メッセージを表示すべきかどうかを判断する関数
+  const shouldShowRuleApproval = (message) => {
+    // ルール承認メッセージでない場合は関係ない
+    if (!message.is_rule_approval) return false
+
+    // receiverが空の配列の場合、全員に表示
+    if (!message.receiver || message.receiver.length === 0) return true
+
+    // receiverリストに現在のユーザー名が含まれている場合のみ表示
+    return message.receiver.includes(currentUsername)
+  }
+
   if (isLoading) {
     return <div>読み込み中...</div>
   }
@@ -346,51 +469,65 @@ export default function ChatComponent() {
             messages.map((message, index) => (
               <div key={index}>
                 {/* 公開メッセージの表示 */}
-                {message.is_public && !message.is_suggest && !message.is_system_message && (
-                  <div className={`flex items-start mb-4 ${message.is_user_sender ? "justify-end" : ""}`}>
-                    {!message.is_user_sender && (
-                      <Avatar className="mr-2">
-                        <AvatarImage
-                          src={
-                            message.sender_profile_picture
-                              ? `http://localhost:8000${message.sender_profile_picture}`
-                              : null
-                          }
-                          alt={message.sender}
-                        />
-                        <AvatarFallback>{message.sender[0]}</AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div className={`max-w-[70%] ${message.is_user_sender ? "text-right" : ""}`}>
-                      <p className="text-sm font-medium">{message.sender}</p>
-                      <div
-                        className={`p-2 rounded-lg ${message.is_user_sender ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
-                      >
-                        {message.content}
+                {message.is_public &&
+                  !message.is_suggest &&
+                  !message.is_system_message &&
+                  !message.is_rule_approval && (
+                    <div className={`flex items-start mb-4 ${message.is_user_sender ? "justify-end" : ""}`}>
+                      {!message.is_user_sender && (
+                        <Avatar className="mr-2">
+                          <AvatarImage
+                            src={
+                              message.sender_profile_picture
+                                ? `http://localhost:8000${message.sender_profile_picture}`
+                                : null
+                            }
+                            alt={message.sender}
+                          />
+                          <AvatarFallback>{message.sender[0]}</AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className={`max-w-[70%] ${message.is_user_sender ? "text-right" : ""}`}>
+                        <p className="text-sm font-medium">{message.sender}</p>
+                        <div
+                          className={`p-2 rounded-lg ${message.is_user_sender ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+                        >
+                          {message.content}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(message.sent_at).toLocaleString("ja-JP")}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(message.sent_at).toLocaleString("ja-JP")}
-                      </p>
+                      {message.is_user_sender && (
+                        <Avatar className="ml-2">
+                          <AvatarImage
+                            src={
+                              message.sender_profile_picture
+                                ? `http://localhost:8000${message.sender_profile_picture}`
+                                : null
+                            }
+                            alt={message.sender}
+                          />
+                          <AvatarFallback>{message.sender[0]}</AvatarFallback>
+                        </Avatar>
+                      )}
                     </div>
-                    {message.is_user_sender && (
-                      <Avatar className="ml-2">
-                        <AvatarImage
-                          src={
-                            message.sender_profile_picture
-                              ? `http://localhost:8000${message.sender_profile_picture}`
-                              : null
-                          }
-                          alt={message.sender}
-                        />
-                        <AvatarFallback>{message.sender[0]}</AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                )}
+                  )}
 
                 {/* システムメッセージの表示（改良版） */}
                 {shouldShowSystemMessage(message) && (
                   <SystemMessageCard content={message.content} sentAt={message.sent_at} />
+                )}
+
+                {/* ルール説明担当確認メッセージの表示 */}
+                {shouldShowRuleApproval(message) && (
+                  <RuleApprovalCard
+                    content={message.content}
+                    sentAt={message.sent_at}
+                    messageId={message.id}
+                    onAccept={handleAcceptRuleExplanation}
+                    onDecline={handleDeclineRuleExplanation}
+                  />
                 )}
 
                 {/* ゲーム提案メッセージの表示 */}
@@ -398,8 +535,8 @@ export default function ChatComponent() {
                   <div className="w-full mb-4 px-2">
                     <GameSuggestionMessage
                       message={message}
-                      onAccept={() => handleAcceptGame(message.id)}
-                      onDecline={() => handleDeclineGame(message.id)}
+                      onAccept={() => handleAcceptGame(message)}
+                      onDecline={() => handleDeclineGame(message)}
                     />
                   </div>
                 )}

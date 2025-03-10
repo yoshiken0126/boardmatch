@@ -7,12 +7,13 @@ from django.http import HttpResponse
 from mip import Model,maximize,xsum
 import numpy as np
 import datetime,random
-from .models import CafeTable,Message
+from .models import CafeTable,Message,SuggestGame
 from .serializers import CafeTableSerializer,BoardGameCafeSerializer,MessageSerializer
 from accounts.serializers import StaffUserSerializer
 from accounts.permissions import IsStaffUser,IsCustomUser
 from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework.decorators import action
 
 
 
@@ -78,8 +79,9 @@ class BoardGameCafeViewSet(viewsets.ModelViewSet):
 
 from rest_framework import viewsets
 from rest_framework.response import Response
-from cafes.models import Reservation,SuggestGameParticipant
-from .serializers import ReservationSerializer,SuggestGameParticipantSerializer
+from rest_framework import status  
+from cafes.models import Reservation,SuggestGameParticipant,SuggestGameInstructor
+from .serializers import ReservationSerializer,SuggestGameParticipantSerializer,SuggestGameInstructorSerializer
 
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
@@ -158,9 +160,110 @@ class SuggestGameParticipantViewSet(viewsets.ModelViewSet):
         # `create`メソッドでユーザーは自動的に処理されるため、追加処理は不要
         serializer.save()
 
+class SuggestGameInstructorViewSet(viewsets.ModelViewSet):
+    queryset = SuggestGameInstructor.objects.all()
+    serializer_class = SuggestGameInstructorSerializer
+    permission_classes = [IsCustomUser]  # 特定のユーザー認証を要求
+    
+    def get_queryset(self):
+        """ログインユーザーに関連するデータのみ返す"""
+        user = self.request.user
+        return SuggestGameInstructor.objects.filter(instructor=user)
+    
+    @action(detail=True, methods=['patch'], url_path='accept')
+    def accept_game(self, request, pk=None):
+        """
+        ゲームの指導を受け入れるカスタムエンドポイント
+        URLパターン: /suggest_game_instructors/{suggestGameId}/accept/
+        """
+        try:
+            # pkはURLから取得したsuggestGameId
+            suggest_game = SuggestGame.objects.get(pk=pk)
+            
+            # このゲームに関連する講師レコードを探す
+            # get_or_createではなく、getを使用して既存のレコードのみを取得
+            try:
+                instructor_record = SuggestGameInstructor.objects.get(
+                    suggest_game=suggest_game,
+                    instructor=request.user
+                )
+                
+                # レコードを更新
+                instructor_record.is_accepted = True
+                instructor_record.save()
+                
+                suggest_game.is_approved = True
+                suggest_game.save()
+                
+                serializer = self.get_serializer(instructor_record)
+                return Response(serializer.data)
+                
+            except SuggestGameInstructor.DoesNotExist:
+                return Response(
+                    {"error": "このゲームに関連する指導者レコードが見つかりません。"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+        except SuggestGame.DoesNotExist:
+            return Response(
+                {"error": "指定されたゲームが見つかりません。"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-
-
+    @action(detail=True, methods=['patch'], url_path='reject')
+    def reject_game(self, request, pk=None):
+        """
+        ゲームの指導を拒否するカスタムエンドポイント
+        URLパターン: /suggest_game_instructors/{suggestGameId}/reject/
+        """
+        try:
+            # pkはURLから取得したsuggestGameId
+            suggest_game = SuggestGame.objects.get(pk=pk)
+            
+            # このゲームに関連する講師レコードを探す
+            # filterではなく、getを使用して例外処理を統一
+            try:
+                instructor_record = SuggestGameInstructor.objects.get(
+                    suggest_game=suggest_game,
+                    instructor=request.user
+                )
+                
+                # レコードを更新
+                instructor_record.is_accepted = False
+                instructor_record.save()
+                
+                # 全ての指導者が拒否した場合はFalse、一部のみの場合はNone
+                if suggest_game.suggestgameinstructor_set.filter(is_accepted=False).count() == suggest_game.suggestgameinstructor_set.count():
+                    suggest_game.is_approved = False
+                else:
+                    suggest_game.is_approved = None
+                
+                suggest_game.save()
+                
+                serializer = self.get_serializer(instructor_record)
+                return Response(serializer.data)
+                
+            except SuggestGameInstructor.DoesNotExist:
+                return Response(
+                    {"error": "このゲームに関連する指導者レコードが見つかりません。"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+        except SuggestGame.DoesNotExist:
+            return Response(
+                {"error": "指定されたゲームが見つかりません。"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 

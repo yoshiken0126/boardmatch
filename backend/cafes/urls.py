@@ -2,7 +2,7 @@ from django.urls import path,include
 from . import views
 from rest_framework.routers import DefaultRouter
 from .views import CafeTableViewSet,StaffInfoViewSet
-from .views import BoardGameCafeViewSet,ReservationViewSet,MessageViewSet,SuggestGameParticipantViewSet
+from .views import BoardGameCafeViewSet,ReservationViewSet,MessageViewSet,SuggestGameParticipantViewSet,SuggestGameInstructorViewSet
 
 
 router = DefaultRouter()
@@ -12,6 +12,7 @@ router.register(r'boardgamecafes', BoardGameCafeViewSet,basename='boardgamecafe'
 router.register(r'reservations', ReservationViewSet,basename='reservation')
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'suggest_game_participants', SuggestGameParticipantViewSet)
+router.register(r'suggest_game_instructors', SuggestGameInstructorViewSet)
 
 
 app_name = 'cafes'

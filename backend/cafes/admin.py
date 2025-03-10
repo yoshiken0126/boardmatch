@@ -104,12 +104,18 @@ from .models import Message, SuggestGame, SuggestGameInstructor
 
 # Messageモデルの管理画面設定
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ('reservation', 'sender', 'sent_at', 'is_public')  # 必要最小限の表示
+    list_display = ('reservation', 'sender', 'sent_at', 'is_public', 'related_suggest_game', 'display_receivers')  # 必要最小限の表示
     search_fields = ('content', 'reservation__id', 'sender__username')  # 簡単な検索機能
+
+    def display_receivers(self, obj):
+        """
+        カスタムメソッドを使って、receiverのユーザー名をカンマ区切りで表示する
+        """
+        return ", ".join([receiver.username for receiver in obj.receiver.all()])
 
 # SuggestGameモデルの管理画面設定
 class SuggestGameAdmin(admin.ModelAdmin):
-    list_display = ('message', 'suggest_game')  # 最小限の表示
+    list_display = ('message', 'suggest_game','is_approved')  # 最小限の表示
     search_fields = ('message__content', 'suggest_game__name')  # 簡単な検索機能
 
 # SuggestGameInstructorモデルの管理画面設定

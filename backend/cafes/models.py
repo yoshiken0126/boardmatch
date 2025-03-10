@@ -3,7 +3,9 @@ from django.contrib.postgres.fields import DateTimeRangeField
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.db.models import Count
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from match.models import UserGameRelation
 
 # Create your models here.
 class CafeGameRelation(models.Model):
@@ -211,6 +213,7 @@ class Message(models.Model):
     read_by_staff = models.ManyToManyField('accounts.CafeStaff', related_name='read_messages', blank=True)
     is_suggest = models.BooleanField(default=False)  # ゲームの提案かどうか
     is_rule_approval = models.BooleanField(default=False)
+    related_suggest_game = models.ForeignKey('cafes.SuggestGame', on_delete=models.SET_NULL, null=True, blank=True, related_name='rule_approval_messages')
     is_system_message = models.BooleanField(default=False)  # システムメッセージかどうか
 
     
@@ -236,6 +239,7 @@ class SuggestGame(models.Model):
     instructors = models.ManyToManyField('accounts.BaseUser', related_name='explained_suggest_games', through='SuggestGameInstructor', blank=True)  # ルール説明者（Instructor）とその受け入れ状態を管理するためのフィールド
     providers = models.ManyToManyField('accounts.CustomUser', related_name='bring_suggest_games',through='SuggestGameProvider', blank=True)
     count_want_to_play = models.IntegerField(default=0)
+    is_approved = models.BooleanField(null=True,default=None)
     def __str__(self):
         return f"Suggest Game for message {self.message.id} - Game: {self.suggest_game.name}"
     
@@ -244,13 +248,160 @@ class SuggestGame(models.Model):
         return self.suggestgameinstructor_set.filter(is_accepted=True).exists()
 
 
+
+
+    def check_and_create_rule_approval_message(self):
+        """
+        is_accepted=Trueの参加者が3名以上で、
+        まだルール承認メッセージが作成されていない場合に
+        ルール承認メッセージを作成するメソッド
+        """
+        # is_accepted=Trueの参加者数をカウント
+        accepted_participants_count = self.suggestgameparticipant_set.filter(is_accepted=True).count()
+        
+        if accepted_participants_count >= 3:
+            # すでにis_rule_approvalメッセージが存在するか確認
+            existing_approval_msgs = Message.objects.filter(
+                reservation=self.message.reservation,
+                sender=None,  # システムメッセージなのでsenderはNone
+                sender_is_staff=False,
+                content=f"ゲーム「{self.suggest_game.name}」のルール説明を担当しますか？",
+                is_public=False,
+                is_rule_approval=True,
+                related_suggest_game=self  # ここで明示的に自身を関連付け
+            )
+            print(existing_approval_msgs)
+            
+            # まだ承認メッセージが作成されていない場合のみ作成
+            if not existing_approval_msgs.exists():
+                return self.create_rule_approval_message()
+                
+        return None
+    
+    def create_rule_approval_message(self):
+        """
+        ルール承認メッセージを作成するメソッド
+        """
+        # 関連するReservationを取得
+        reservation = self.message.reservation
+        
+        # is_rule_approval=TrueのMessageインスタンスを作成
+        rule_approval_message = Message.objects.create(
+            reservation=reservation,
+            sender=None,  # システムメッセージなのでsenderはNone
+            sender_is_staff=False,
+            content=f"ゲーム「{self.suggest_game.name}」のルール説明を担当しますか？",
+            is_public=False,
+            is_rule_approval=True,
+            related_suggest_game=self  # ここで明示的に自身を関連付け
+        )
+
+        instructors = self.instructors.all()  # SuggestGameのインストラクターを取得
+        rule_approval_message.receiver.add(*instructors)  # receiversにインストラクターを追加
+        
+        return rule_approval_message
+
+
+    def add_providers_if_needed(self):
+        """
+        `Reservation`の参加者で`UserGameRelation`において`is_having=True`のユーザーが、
+        `CafeGameRelation`にゲームが存在しない場合、そのユーザーを`providers`に追加する。
+        その後、そのユーザーが`providers`に追加されていれば、そのユーザーを`instructor`としても追加する。
+        """
+        # このSuggestGameに関連する予約を取得
+        reservation = self.message.reservation
+
+        # リザベーションに関連するカフェ情報を取得
+        cafe = reservation.cafe
+
+        # リザベーションに参加しているユーザーを取得
+        participants = Participant.objects.filter(reservation=reservation)
+
+        # 参加者の中から、is_having=Trueのユーザーを絞り込み
+        for participant in participants:
+            user = participant.user
+
+            # ユーザーがそのゲームを所有しているか確認（is_having=True）
+            user_game_relation = UserGameRelation.objects.filter(user=user, game=self.suggest_game, is_having=True).first()
+
+            # ユーザーがそのゲームを所有していて、かつCafeGameRelationにゲームがない場合
+            if user_game_relation:
+                # ユーザーがそのカフェにゲームを持ち込んでいない場合
+                if not CafeGameRelation.objects.filter(cafe=cafe, game=self.suggest_game).exists():
+                    # SuggestGameProviderがすでに存在しない場合のみ作成
+                    if not SuggestGameProvider.objects.filter(suggest_game=self, provider=user).exists():
+                        suggest_game_provider = SuggestGameProvider.objects.create(
+                            suggest_game=self,
+                            provider=user
+                        )
+
+                        # ユーザーがproviderに追加された場合、そのユーザーをinstructorにも追加
+                        if not SuggestGameInstructor.objects.filter(suggest_game=self, instructor=user).exists():
+                            # ここでinstructorを追加
+                            SuggestGameInstructor.objects.create(
+                                suggest_game=self,
+                                instructor=user,
+                                is_accepted=None  # 初期状態では未承認
+                            )
+
+                        
+
+    def add_instructors_if_possible(self):
+        """
+        `UserGameRelation`で`can_instruct=True`で、かつ予約の参加者である場合
+        自動的に`SuggestGameInstructor`に追加するメソッド
+        """
+        # Reservationに紐づく全参加者を取得
+        reservation_participants = self.message.reservation.participant.all()
+
+        # ルール説明者として追加できるユーザーを検索
+        for participant in reservation_participants:
+            # `UserGameRelation`で`can_instruct=True`のユーザーを検索
+            user_game_relation = UserGameRelation.objects.filter(
+                user=participant,
+                game=self.suggest_game,
+                can_instruct=True
+            ).first()
+
+            if user_game_relation:
+                # `UserGameRelation`が存在し、`can_instruct=True`ならインストラクターとして追加
+                # 同じ`suggest_game`と`instructor`が既に存在するかチェック
+                if not SuggestGameInstructor.objects.filter(suggest_game=self, instructor=participant).exists():
+                    # 存在しない場合のみインスタンスを作成
+                    SuggestGameInstructor.objects.create(
+                        suggest_game=self,
+                        instructor=participant,  # 参加者がインストラクター
+                        is_accepted=None  # 初期状態では未承認
+                    )
+
+
+                
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        
+        # Add providers if needed
+        self.add_providers_if_needed()
+        
+        # Add instructors if possible
+        if not self.providers.exists():
+            self.add_instructors_if_possible()
+        
+       
+        
+
+
+
+
 class SuggestGameInstructor(models.Model):
     suggest_game = models.ForeignKey('SuggestGame', on_delete=models.CASCADE)  # ゲーム提案に紐づく
     instructor = models.ForeignKey('accounts.BaseUser', on_delete=models.CASCADE)  # ルール説明者（スタッフ）
-    is_accepted = models.BooleanField(default=False)  # ルール説明を受け入れたかどうか
+    is_accepted = models.BooleanField(null=True, default=None) 
     
     def __str__(self):
         return f"Instructor {self.instructor} accepted: {self.is_accepted} for suggest {self.suggest_game.id}"
+
+    
 
 class SuggestGameProvider(models.Model):
     suggest_game = models.ForeignKey('SuggestGame', on_delete=models.CASCADE)  # ゲーム提案に紐づく
@@ -263,6 +414,19 @@ class SuggestGameParticipant(models.Model):
     suggest_game = models.ForeignKey('SuggestGame', on_delete=models.CASCADE)  # ゲーム提案に紐づく
     participant = models.ForeignKey('accounts.CustomUser', on_delete=models.CASCADE)  # ルール説明者（スタッフ）
     is_accepted = models.BooleanField(default=False)  # ルール説明を受け入れたかどうか
+
     def __str__(self):
         return f"Instructor {self.participant} accepted: {self.is_accepted} for suggest {self.suggest_game.id}"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        print(f"SuggestGameParticipant save called. Is new: {is_new}")
+        
+        super().save(*args, **kwargs)
+        
+        if is_new:
+            print("Checking for rule approval message creation")
+            participants_count = self.suggest_game.participants.count()
+            print(f"Current participants count: {participants_count}")
+            self.suggest_game.check_and_create_rule_approval_message()
 

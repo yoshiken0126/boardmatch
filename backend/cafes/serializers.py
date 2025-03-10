@@ -89,11 +89,32 @@ from match.serializers import BoardGameSerializer
 
 class SuggestGameInstructorSerializer(serializers.ModelSerializer):
     # `instructor`の`username`を文字列として取得する
-    instructor = serializers.StringRelatedField()
+    instructor = serializers.StringRelatedField()  # `instructor`の`__str__`を使用
+    is_accepted = serializers.BooleanField()  # `is_accepted`フィールドを追加
+    suggest_game = serializers.PrimaryKeyRelatedField(queryset=SuggestGame.objects.all(), write_only=True)  # POST専用のゲームID
+    user_id = serializers.SerializerMethodField()  # `user_id`をシリアライズするためのフィールド
 
     class Meta:
         model = SuggestGameInstructor
-        fields = ['id','instructor', 'is_accepted']
+        fields = ['id', 'instructor', 'is_accepted', 'suggest_game', 'user_id']
+
+    def get_user_id(self, obj):
+        """
+        `instructor` から `user_id` を取得して返す
+        """
+        if hasattr(obj, 'instructor') and obj.instructor:
+            return obj.instructor.id
+        return None
+
+    def update(self, instance, validated_data):
+        # is_acceptedフィールドの値を取得
+        is_accepted = validated_data.get('is_accepted', instance.is_accepted)
+        
+        # インスタンスを更新
+        instance.is_accepted = is_accepted
+        instance.save()
+        
+        return instance
     
 class SuggestGameProviderSerializer(serializers.ModelSerializer):
     provider = serializers.StringRelatedField()
@@ -172,10 +193,11 @@ class MessageSerializer(serializers.ModelSerializer):
     is_user_sender = serializers.SerializerMethodField()  # ログイン中のユーザーが送信者かどうか判定
     sender_profile_picture = serializers.SerializerMethodField()  # 送信者のプロフィール画像
     suggest_game = serializers.SerializerMethodField()  # ゲーム提案の情報（関連があれば）
+    related_suggest_game = SuggestGameSerializer()
 
     class Meta:
         model = Message
-        fields = ['reservation', 'sender','is_public','is_system_message','is_rule_approval','is_suggest', 'content', 'sent_at', 'is_user_sender', 'sender_profile_picture', 'suggest_game','receiver']
+        fields = ['reservation', 'sender','is_public','is_system_message','is_rule_approval','is_suggest', 'content', 'sent_at', 'is_user_sender', 'sender_profile_picture', 'suggest_game','receiver','related_suggest_game']
 
     def get_is_user_sender(self, obj):
         """

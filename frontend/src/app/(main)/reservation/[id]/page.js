@@ -12,6 +12,7 @@ import { MoreVertical, Users, Clock, User, Check, X, BookOpen, Info, HelpCircle 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
+import { jwtDecode } from "jwt-decode"
 
 // システムメッセージカードコンポーネント（改良版）
 const SystemMessageCard = ({ content, sentAt }) => {
@@ -41,6 +42,16 @@ const SystemMessageCard = ({ content, sentAt }) => {
 
 // ルール説明担当確認メッセージコンポーネント
 const RuleApprovalCard = ({ content, sentAt, messageId, onAccept, onDecline }) => {
+  const currentUserId = getCurrentUserId()
+  const suggestGame = messageId.related_suggest_game
+  const instructors = suggestGame.instructors || []
+
+  // Check if the current user has already responded
+  const hasUserResponded = instructors.some((i) => i.user_id === currentUserId && i.is_accepted !== null)
+
+  // Find the instructor record for the current user
+  const userInstructor = instructors.find((i) => i.user_id === currentUserId)
+
   return (
     <div className="w-full my-4 px-4">
       <div className="bg-gray-100 rounded-lg shadow-sm overflow-hidden">
@@ -50,20 +61,30 @@ const RuleApprovalCard = ({ content, sentAt, messageId, onAccept, onDecline }) =
         </div>
         <div className="p-4">
           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{content}</p>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              variant="outline"
-              className="border-destructive text-destructive hover:bg-destructive/10"
-              onClick={() => onDecline(messageId)}
-            >
-              <X className="h-4 w-4 mr-1" />
-              見送る
-            </Button>
-            <Button variant="default" onClick={() => onAccept(messageId)}>
-              <Check className="h-4 w-4 mr-1" />
-              担当する
-            </Button>
-          </div>
+
+          {!hasUserResponded ? (
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive/10"
+                onClick={() => onDecline(suggestGame.id)}
+              >
+                <X className="h-4 w-4 mr-1" />
+                見送る
+              </Button>
+              <Button variant="default" onClick={() => onAccept(suggestGame.id)}>
+                <Check className="h-4 w-4 mr-1" />
+                担当する
+              </Button>
+            </div>
+          ) : (
+            <div className="flex justify-end mt-4">
+              <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">
+                回答済み
+              </Badge>
+            </div>
+          )}
+
           <p className="text-xs text-gray-500 mt-2">
             {new Date(sentAt).toLocaleString("ja-JP", {
               year: "numeric",
@@ -82,9 +103,16 @@ const RuleApprovalCard = ({ content, sentAt, messageId, onAccept, onDecline }) =
 // ゲーム提案メッセージコンポーネント
 const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
   const game = message.suggest_game.suggest_game
-  const participants = message.suggest_game.participants.filter((p) => p.is_accepted)
-  const instructors = message.suggest_game.instructors.filter((i) => i.is_accepted)
+  const participants = message.suggest_game.participants
+  const instructors = message.suggest_game.instructors
   const providers = message.suggest_game.providers
+  const currentUserId = getCurrentUserId()
+
+  // Check if the current user has already responded to this suggestion
+  const hasUserResponded = participants.some((p) => p.user_id === currentUserId)
+
+  // Get accepted participants for display
+  const acceptedParticipants = participants.filter((p) => p.is_accepted)
 
   // Check if game is brought by a user or from the cafe
   const isBroughtByUser = providers && providers.length > 0
@@ -157,20 +185,28 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
         </div>
       </CardContent>
       <CardFooter className="flex-col items-stretch gap-2">
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            className="w-32 border-destructive text-destructive hover:bg-destructive/10"
-            onClick={onDecline}
-          >
-            <X className="h-4 w-4 mr-1" />
-            見送る
-          </Button>
-          <Button variant="default" className="w-32" onClick={onAccept}>
-            <Check className="h-4 w-4 mr-1" />
-            遊びたい
-          </Button>
-        </div>
+        {!hasUserResponded ? (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              className="w-32 border-destructive text-destructive hover:bg-destructive/10"
+              onClick={onDecline}
+            >
+              <X className="h-4 w-4 mr-1" />
+              見送る
+            </Button>
+            <Button variant="default" className="w-32" onClick={onAccept}>
+              <Check className="h-4 w-4 mr-1" />
+              遊びたい
+            </Button>
+          </div>
+        ) : (
+          <div className="flex justify-end">
+            <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">
+              回答済み
+            </Badge>
+          </div>
+        )}
         {instructors && instructors.length > 0 && (
           <div className="w-full mt-3 pt-3 border-t">
             <div className="flex items-center gap-2 mb-1">
@@ -186,13 +222,13 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
             </div>
           </div>
         )}
-        {participants && participants.length > 0 && (
+        {acceptedParticipants && acceptedParticipants.length > 0 && (
           <div className="w-full mt-3 pt-3 border-t">
             <div className="flex items-center gap-2 mb-1">
               <Users className="h-4 w-4 text-muted-foreground" />
               <p className="text-sm font-medium">遊びたい人:</p>
 
-              {participants.map((participant, i) => (
+              {acceptedParticipants.map((participant, i) => (
                 <Badge key={`participant-${i}`} variant="secondary" className="flex items-center gap-1">
                   <User className="h-3 w-3" />
                   <span>{participant.participant}</span>
@@ -208,9 +244,22 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
 
 // ローカルストレージからトークンを取得する関数
 const getToken = () => {
-  // 実際のトークン取得ロジックに置き換えてください
   const token = localStorage.getItem("token")
   return token
+}
+
+// Add this function to get the current user ID from the token:
+const getCurrentUserId = () => {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) return null
+
+    const decoded = jwtDecode(token)
+    return decoded.user_id || decoded.id || null
+  } catch (error) {
+    console.error("トークンのデコードに失敗しました:", error)
+    return null
+  }
 }
 
 // ローカルストレージからユーザー名を取得する関数
@@ -312,8 +361,6 @@ export default function ChatComponent() {
         },
       )
 
-      alert("ゲームへの参加を承諾しました！")
-
       // メッセージを再取得して画面を更新
       const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
@@ -323,7 +370,6 @@ export default function ChatComponent() {
       setMessages(response.data || [])
     } catch (error) {
       console.error("ゲームの承諾に失敗しました:", error)
-      alert("ゲームの承諾に失敗しました")
     }
   }
 
@@ -347,8 +393,6 @@ export default function ChatComponent() {
         },
       )
 
-      alert("ゲームへの参加を辞退しました。")
-
       // メッセージを再取得して画面を更新
       const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
@@ -358,15 +402,16 @@ export default function ChatComponent() {
       setMessages(response.data || [])
     } catch (error) {
       console.error("ゲームの辞退に失敗しました:", error)
-      alert("ゲームの辞退に失敗しました")
     }
   }
 
-  const handleAcceptRuleExplanation = async (messageId) => {
+  const handleAcceptRuleExplanation = async (suggestGameId) => {
     try {
       const token = getToken()
-      await axios.post(
-        `http://localhost:8000/cafes/api/messages/${messageId}/accept_rule_explanation/`,
+
+      // suggest_gameのIDを使用してルール説明担当を承諾
+      await axios.patch(
+        `http://localhost:8000/cafes/api/suggest_game_instructors/${suggestGameId}/accept/`,
         {},
         {
           headers: {
@@ -374,8 +419,8 @@ export default function ChatComponent() {
           },
         },
       )
-      alert("ルール説明を担当します！")
-      // Refresh messages
+
+      // メッセージを再取得して画面を更新
       const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -384,15 +429,16 @@ export default function ChatComponent() {
       setMessages(response.data || [])
     } catch (error) {
       console.error("ルール説明の承諾に失敗しました:", error)
-      alert("ルール説明の承諾に失敗しました")
     }
   }
 
-  const handleDeclineRuleExplanation = async (messageId) => {
+  const handleDeclineRuleExplanation = async (suggestGameId) => {
     try {
       const token = getToken()
-      await axios.post(
-        `http://localhost:8000/cafes/api/messages/${messageId}/decline_rule_explanation/`,
+
+      // suggest_gameのIDを使用してルール説明担当を辞退
+      await axios.patch(
+        `http://localhost:8000/cafes/api/suggest_game_instructors/${suggestGameId}/reject/`,
         {},
         {
           headers: {
@@ -400,8 +446,8 @@ export default function ChatComponent() {
           },
         },
       )
-      alert("ルール説明を見送りました。")
-      // Refresh messages
+
+      // メッセージを再取得して画面を更新
       const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -410,7 +456,6 @@ export default function ChatComponent() {
       setMessages(response.data || [])
     } catch (error) {
       console.error("ルール説明の辞退に失敗しました:", error)
-      alert("ルール説明の辞退に失敗しました")
     }
   }
 
@@ -453,8 +498,11 @@ export default function ChatComponent() {
     // receiverが空の配列の場合、全員に表示
     if (!message.receiver || message.receiver.length === 0) return true
 
-    // receiverリストに現在のユーザー名が含まれている場合のみ表示
-    return message.receiver.includes(currentUsername)
+    // 現在のユーザーIDを取得
+    const currentUserId = getCurrentUserId()
+
+    // receiverリストに現在のユーザーIDが含まれている場合のみ表示
+    return message.receiver.includes(currentUserId)
   }
 
   if (isLoading) {
@@ -524,7 +572,7 @@ export default function ChatComponent() {
                   <RuleApprovalCard
                     content={message.content}
                     sentAt={message.sent_at}
-                    messageId={message.id}
+                    messageId={message}
                     onAccept={handleAcceptRuleExplanation}
                     onDecline={handleDeclineRuleExplanation}
                   />

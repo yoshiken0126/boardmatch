@@ -2,7 +2,7 @@ from django.urls import path,include
 from . import views
 from rest_framework.routers import DefaultRouter
 from .views import CafeTableViewSet,StaffInfoViewSet
-from .views import BoardGameCafeViewSet,ReservationViewSet,MessageViewSet,SuggestGameParticipantViewSet,SuggestGameInstructorViewSet
+from .views import BoardGameCafeViewSet,ReservationViewSet,MessageViewSet,SuggestGameParticipantViewSet,SuggestGameInstructorViewSet,CafeHaveSuggestGameViewSet,UserHaveSuggestGameViewSet,SuggestGameViewSet
 
 
 router = DefaultRouter()
@@ -13,7 +13,9 @@ router.register(r'reservations', ReservationViewSet,basename='reservation')
 router.register(r'messages', MessageViewSet, basename='message')
 router.register(r'suggest_game_participants', SuggestGameParticipantViewSet)
 router.register(r'suggest_game_instructors', SuggestGameInstructorViewSet)
-
+router.register(r'cafe_have_suggest_games/(?P<id>\d+)/(?P<class_param>[^/]+)', CafeHaveSuggestGameViewSet, basename='cafe-game')
+router.register(r'user_have_suggest_games/(?P<id>\d+)/(?P<class_param>[^/]+)', UserHaveSuggestGameViewSet, basename='user-game')
+router.register(r'suggest_games', SuggestGameViewSet) 
 
 app_name = 'cafes'
 urlpatterns = [

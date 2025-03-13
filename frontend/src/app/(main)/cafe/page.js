@@ -86,6 +86,9 @@ export default function Home() {
         }),
       ])
 
+      console.log("Cafe Games Response:", cafeGamesResponse.data);
+      console.log("Personal Games Response:", personalGamesResponse.data);
+
       setCafeGames(cafeGamesResponse.data)
       setPersonalGames(personalGamesResponse.data)
     } catch (error) {

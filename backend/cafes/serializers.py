@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import CafeTable
-from accounts.models import BoardGameCafe,CustomUser,CafeStaff
+from accounts.models import BoardGameCafe,CustomUser,CafeStaff,BoardGame
 
 class CafeTableSerializer(serializers.ModelSerializer):
     class Meta:
@@ -83,8 +83,9 @@ class ReservationSerializer(serializers.ModelSerializer):
     
 
 
-from .models import Message, SuggestGame, SuggestGameInstructor,SuggestGameProvider,SuggestGameParticipant
+from .models import Message, SuggestGame, SuggestGameInstructor,SuggestGameProvider,SuggestGameParticipant,CafeGameRelation
 from match.serializers import BoardGameSerializer
+from match.models import UserGameRelation
 
 
 class SuggestGameInstructorSerializer(serializers.ModelSerializer):
@@ -164,13 +165,15 @@ class SuggestGameParticipantSerializer(serializers.ModelSerializer):
 
 class SuggestGameSerializer(serializers.ModelSerializer):
     suggest_game = serializers.SerializerMethodField()# 提案されたゲーム名
-    participants = SuggestGameParticipantSerializer(source='suggestgameparticipant_set', many=True)  # 承認した参加者
-    instructors = SuggestGameInstructorSerializer(source='suggestgameinstructor_set', many=True)  # 明示的に関連名を指定
-    providers = SuggestGameProviderSerializer(source='suggestgameprovider_set', many=True)  # 明示的に関連名を指定
+    participants = SuggestGameParticipantSerializer(source='suggestgameparticipant_set', many=True,required=False)  # 承認した参加者
+    instructors = SuggestGameInstructorSerializer(source='suggestgameinstructor_set', many=True,required=False)  # 明示的に関連名を指定
+    providers = SuggestGameProviderSerializer(source='suggestgameprovider_set', many=True,required=False)  # 明示的に関連名を指定
+    reservation = serializers.PrimaryKeyRelatedField(queryset=Reservation.objects.all(),write_only=True)  # ReservationのIDを受け取る
+    game = serializers.PrimaryKeyRelatedField(queryset=BoardGame.objects.all(),write_only=True)  # GameのIDを受け取る
 
     class Meta:
         model = SuggestGame
-        fields = ['id','suggest_game', 'participants', 'instructors','providers', 'count_want_to_play']
+        fields = ['id','suggest_game', 'participants', 'instructors','providers', 'count_want_to_play','is_approved','reservation','game']
 
     def get_suggest_game(self, obj):
         """
@@ -239,5 +242,20 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 
+class CafeHaveSuggestGameSerializer(serializers.Serializer):
+    game = BoardGameSerializer()  # game フィールドを BoardGameSerializer でシリアライズ
+    want_to_play_count = serializers.IntegerField()
+
+    class Meta:
+        model = CafeGameRelation
+        fields = ['game', 'want_to_play_count']
+
+class UserHaveSuggestGameSerializer(serializers.Serializer):
+    game = BoardGameSerializer()  # game フィールドを BoardGameSerializer でシリアライズ
+    want_to_play_count = serializers.IntegerField()  # プレイしたい回数
+
+    class Meta:
+        model = UserGameRelation
+        fields = ['game', 'want_to_play_count']
 
 

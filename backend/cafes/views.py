@@ -1,6 +1,6 @@
 from django.shortcuts import render,redirect
 from accounts.models import CustomUser, BoardGameCafe, CafeStaff, BoardGame
-from match.models import UserCafeRelation, UserFreeTime, MatchDay, MatchDayUser,UserRelation
+from match.models import UserCafeRelation, UserFreeTime, MatchDay, MatchDayUser,UserRelation,UserGameRelation
 from cafes.forms import CafeGameRelationForm,CafeGameRelation,StaffGameRelation,StaffGameRelationForm
 from django.http import HttpResponse
 # Create your views here.
@@ -80,8 +80,11 @@ class BoardGameCafeViewSet(viewsets.ModelViewSet):
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status  
+from accounts.models import GameClass
 from cafes.models import Reservation,SuggestGameParticipant,SuggestGameInstructor
-from .serializers import ReservationSerializer,SuggestGameParticipantSerializer,SuggestGameInstructorSerializer
+from match.serializers import BoardGameSerializer
+from .serializers import ReservationSerializer,SuggestGameParticipantSerializer,SuggestGameInstructorSerializer,CafeHaveSuggestGameSerializer,UserHaveSuggestGameSerializer
+from django.db.models import Count
 
 class ReservationViewSet(viewsets.ModelViewSet):
     queryset = Reservation.objects.all()
@@ -163,7 +166,7 @@ class SuggestGameParticipantViewSet(viewsets.ModelViewSet):
 class SuggestGameInstructorViewSet(viewsets.ModelViewSet):
     queryset = SuggestGameInstructor.objects.all()
     serializer_class = SuggestGameInstructorSerializer
-    permission_classes = [IsCustomUser]  # 特定のユーザー認証を要求
+    
     
     def get_queryset(self):
         """ログインユーザーに関連するデータのみ返す"""
@@ -266,9 +269,226 @@ class SuggestGameInstructorViewSet(viewsets.ModelViewSet):
             )
 
 
+class CafeHaveSuggestGameViewSet(viewsets.ModelViewSet):
+    queryset = CafeGameRelation.objects.all()
+    serializer_class = CafeHaveSuggestGameSerializer
+    permission_classes = [IsCustomUser]  # 認証が必要
+
+    def get_queryset(self):
+        """
+        `reservation_id`と`player_class`に基づいてゲーム情報をフィルタリングし、
+        予約参加者の中でwant_to_play=Trueのユーザー数をカウントして降順にソートする。
+        """
+        reservation_id = self.kwargs['id']
+        player_class = self.kwargs.get('class_param')
+
+        # デフォルトでは空のクエリセットを返す
+        queryset = CafeGameRelation.objects.none()
+
+        # ゲームクラスのマッピング
+        game_class_mapping = {
+            'light': '軽量級',
+            'medium': '中量級',
+            'heavy': '重量級',
+        }
+
+        try:
+            # 予約IDからカフェIDを特定
+            reservation = Reservation.objects.get(id=reservation_id)
+            cafe_id = reservation.cafe.id
+
+            # 予約に参加しているユーザーを取得
+            participants = reservation.participant.all()
+
+            # "all"の場合、すべてのゲームを返す処理
+            if player_class == 'all' or player_class == '全て' or player_class == '全部':
+                # "all"の場合、カフェIDに基づいて関連するすべてのゲームを取得
+                queryset = CafeGameRelation.objects.filter(cafe_id=cafe_id)
+            else:
+                # "all"以外の場合、マッピングされたゲームクラス名を取得
+                if player_class in game_class_mapping:
+                    mapped_class_name = game_class_mapping[player_class]
+                    # プレイヤークラス名（日本語）に基づいてフィルタリング
+                    try:
+                        game_class_instance = GameClass.objects.get(name=mapped_class_name)
+                        # カフェIDとゲームクラスに基づいて関連するゲームを取得
+                        queryset = CafeGameRelation.objects.filter(
+                            cafe_id=cafe_id,
+                            game__game_class=game_class_instance
+                        )
+                    except GameClass.DoesNotExist:
+                        # `GameClass`が存在しない場合、空のクエリセットを返す
+                        pass
+                else:
+                    # マッピングされていない場合は空のクエリセットを返す
+                    pass
+
+            # ゲームごとにwant_to_play=Trueのユーザー数をカウント
+            result = []
+            for relation in queryset:
+                game = relation.game
+
+                # 参加者の中でwant_to_play=Trueのユーザーをカウント
+                want_to_play_count = participants.filter(
+                    game_relations__game=game, game_relations__want_to_play=True
+                ).count()
+
+                # 使用するデータ構造に合わせてゲームの詳細を返す
+                result.append({
+                    'game': BoardGameSerializer(game).data,  # Serializing the game data
+                    'want_to_play_count': want_to_play_count
+                })
+
+            # want_to_play_countの降順でソート
+            result.sort(key=lambda x: x['want_to_play_count'], reverse=True)
+
+            return result
+
+        except Reservation.DoesNotExist:
+            # `Reservation`が存在しない場合、空のリストを返す
+            return []
+
+
+class UserHaveSuggestGameViewSet(viewsets.ModelViewSet):
+    queryset = UserGameRelation.objects.all()
+    serializer_class = UserHaveSuggestGameSerializer
+    permission_classes = [IsCustomUser]  # 認証が必要
+
+    def get_queryset(self):
+        """
+        参加者が持っているゲームで、かつカフェにはないゲームを取得し、  
+        ゲームクラス（軽量級、中量級、重量級）ごとに分類し、  
+        want_to_play=Trueのユーザー数で降順にソートして返す。
+        """
+        # URLパラメータから予約IDとゲームクラスのパラメータを取得
+        reservation_id = self.kwargs['id']
+        player_class = self.kwargs.get('class_param')
+
+        # デフォルトでは空のクエリセットを返す
+        queryset = UserGameRelation.objects.none()
+
+        # ゲームクラスのマッピング（軽量級、中量級、重量級）
+        game_class_mapping = {
+            'light': '軽量級',
+            'medium': '中量級',
+            'heavy': '重量級',
+        }
+
+        try:
+            # 予約IDからカフェIDを特定
+            reservation = Reservation.objects.get(id=reservation_id)
+            cafe_id = reservation.cafe.id
+
+            # 予約に参加しているユーザーを取得
+            participants = reservation.participant.all()
+
+            # 参加者が持っているゲーム（is_having=True）のIDを取得
+            participant_owned_game_ids = UserGameRelation.objects.filter(
+                user__in=participants, is_having=True
+            ).values_list('game__id', flat=True).distinct()
+
+            # カフェにあるゲームのIDを取得
+            cafe_game_ids = CafeGameRelation.objects.filter(
+                cafe_id=cafe_id
+            ).values_list('game__id', flat=True)
+
+            # 参加者が持っていて、カフェにはないゲームのIDを取得
+            not_in_cafe_game_ids = [
+                game_id for game_id in participant_owned_game_ids 
+                if game_id not in cafe_game_ids
+            ]
+
+            # このゲームIDに関連するUserGameRelationを取得
+            # (参加者に限定しない一意のゲームレコードを取得するため)
+            unique_game_relations = UserGameRelation.objects.filter(
+                game__id__in=not_in_cafe_game_ids
+            ).distinct('game__id')  # PostgreSQLの場合
+
+            # ゲームクラスのフィルタリング
+            filtered_relations = []
+            if player_class in game_class_mapping:
+                # ゲームクラスが指定されている場合、そのクラスにマッチするゲームだけをフィルタリング
+                mapped_class_name = game_class_mapping[player_class]
+                for relation in unique_game_relations:
+                    if relation.game.game_class.name == mapped_class_name:
+                        filtered_relations.append(relation)
+            else:
+                # ゲームクラスが指定されていない場合は全てのゲームを取得
+                filtered_relations = list(unique_game_relations)
+
+            # ゲームごとにwant_to_play=Trueのユーザー数をカウント
+            result = []
+            for relation in filtered_relations:
+                game = relation.game
+
+                # 参加者の中でwant_to_play=Trueのユーザーをカウント
+                want_to_play_count = UserGameRelation.objects.filter(
+                    user__in=participants,
+                    game=game,
+                    want_to_play=True
+                ).count()
+
+                # 使用するデータ構造に合わせてゲームの詳細を返す
+                result.append({
+                    'game': BoardGameSerializer(game).data,
+                    'want_to_play_count': want_to_play_count
+                })
+
+            # want_to_play_countの降順でソート
+            result.sort(key=lambda x: x['want_to_play_count'], reverse=True)
+
+            return result
+
+        except Reservation.DoesNotExist:
+            # 予約IDに該当する予約が存在しない場合は空のクエリセットを返す
+            return queryset
 
 
 
+from rest_framework import viewsets
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from .models import SuggestGame, Reservation
+from .serializers import SuggestGameSerializer
+from django.core.exceptions import ObjectDoesNotExist
+
+class SuggestGameViewSet(viewsets.ModelViewSet):
+    queryset = SuggestGame.objects.all()
+    serializer_class = SuggestGameSerializer
+
+    @action(detail=False, methods=['post'])
+    def create_suggest_game(self, request):
+        """
+        POSTリクエストで予約IDとゲームIDを元にSuggestGameを作成
+        """
+        reservation_id = request.data.get('reservation')
+        print(reservation_id)
+        game_id = request.data.get('game')
+        print(game_id)
+        source = request.data.get('source')  # "cafe" または "bring" といったソースの指定
+
+        try:
+            # Reservationを取得
+            reservation = Reservation.objects.get(id=reservation_id)
+            print(reservation)
+        except Reservation.DoesNotExist:
+            return Response({"detail": "Reservation not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            # BoardGameを取得
+            game = BoardGame.objects.get(id=game_id)
+            print(game)
+        except BoardGame.DoesNotExist:
+            return Response({"detail": "Game not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        message = Message.objects.create(reservation=reservation,is_public=False,is_suggest=True)
+        suggestgame = SuggestGame.objects.create(message=message,suggest_game=game)
+
+        
+        # 作成したSuggestGameのデータを返す
+        serializer = self.get_serializer(suggestgame)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 

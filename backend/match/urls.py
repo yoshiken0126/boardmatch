@@ -19,6 +19,7 @@ router.register(r'user_have_games/(?P<game_class>[^/]+)', UserHaveGameViewSet, b
 router.register(r'cafe_have_games/(?P<cafe_id>\d+)/(?P<player_class>[^/]+)', CafeHaveGameViewSet, basename='cafe_have_game')
 
 
+
 app_name = 'match'
 urlpatterns = [
     path('frontpage/',views.show_frontpage,name='frontpage'),

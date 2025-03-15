@@ -21,14 +21,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 // システムメッセージカードコンポーネント（改良版）
 const SystemMessageCard = ({ content, sentAt }) => {
   return (
-    <div className="w-full my-4 px-4">
+    <div className="w-full my-3 px-2 sm:my-4 sm:px-4">
       <div className="bg-gray-100 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-3 bg-gray-200 flex items-center">
-          <Info className="h-5 w-5 text-gray-600 mr-2" />
-          <span className="text-sm font-semibold text-gray-700">システム通知</span>
+        <div className="px-3 py-2 sm:px-4 sm:py-3 bg-gray-200 flex items-center">
+          <Info className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 mr-2" />
+          <span className="text-xs sm:text-sm font-semibold text-gray-700">システム通知</span>
         </div>
-        <div className="p-4">
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{content}</p>
+        <div className="p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-line">{content}</p>
           <p className="text-xs text-gray-500 mt-2">
             {new Date(sentAt).toLocaleString("ja-JP", {
               year: "numeric",
@@ -57,33 +57,37 @@ const RuleApprovalCard = ({ content, sentAt, messageId, onAccept, onDecline }) =
   const userInstructor = instructors.find((i) => i.user_id === currentUserId)
 
   return (
-    <div className="w-full my-4 px-4">
+    <div className="w-full my-3 px-2 sm:my-4 sm:px-4">
       <div className="bg-gray-100 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-3 bg-gray-200 flex items-center">
-          <HelpCircle className="h-5 w-5 text-gray-600 mr-2" />
-          <span className="text-sm font-semibold text-gray-700">ルール説明担当確認</span>
+        <div className="px-3 py-2 sm:px-4 sm:py-3 bg-gray-200 flex items-center">
+          <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 mr-2" />
+          <span className="text-xs sm:text-sm font-semibold text-gray-700">ルール説明担当確認</span>
         </div>
-        <div className="p-4">
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{content}</p>
+        <div className="p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-line">{content}</p>
 
           {!hasUserResponded ? (
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex justify-end gap-2 mt-3 sm:mt-4">
               <Button
                 variant="outline"
-                className="border-destructive text-destructive hover:bg-destructive/10"
+                className="border-destructive text-destructive hover:bg-destructive/10 text-xs sm:text-sm py-1 h-8"
                 onClick={() => onDecline(suggestGame.id)}
               >
-                <X className="h-4 w-4 mr-1" />
+                <X className="h-3 w-3 mr-1" />
                 見送る
               </Button>
-              <Button variant="default" onClick={() => onAccept(suggestGame.id)}>
-                <Check className="h-4 w-4 mr-1" />
+              <Button
+                variant="default"
+                className="text-xs sm:text-sm py-1 h-8"
+                onClick={() => onAccept(suggestGame.id)}
+              >
+                <Check className="h-3 w-3 mr-1" />
                 担当する
               </Button>
             </div>
           ) : (
-            <div className="flex justify-end mt-4">
-              <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">
+            <div className="flex justify-end mt-3 sm:mt-4">
+              <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300 text-xs">
                 回答済み
               </Badge>
             </div>
@@ -135,47 +139,51 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
   // タイトル部分のスタイルを承認状態に応じて変更
   const getTitleStyle = () => {
     if (isApproved === true) {
-      return "text-lg text-gray-900 font-semibold"
+      return "text-base sm:text-lg text-gray-900 font-semibold"
     } else {
       // Falseの場合もNoneと同じスタイルに
-      return "text-lg"
+      return "text-base sm:text-lg"
     }
   }
 
   return (
     <Card className={getCardStyle()}>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-2">
+      <CardHeader className="p-2 sm:pb-2">
+        <div className="flex justify-between items-start flex-wrap gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             <CardTitle className={getTitleStyle()}>{game.name}</CardTitle>
-            {game.game_class && game.game_class.length > 0 && <Badge variant="secondary">{game.game_class[0]}</Badge>}
+            {game.game_class && game.game_class.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {game.game_class[0]}
+              </Badge>
+            )}
             {isApproved === true && (
-              <Badge variant="outline" className="bg-gray-800 text-gray-100 border-gray-700">
+              <Badge variant="outline" className="bg-gray-800 text-gray-100 border-gray-700 text-xs">
                 承認済み
               </Badge>
             )}
             {isApproved === false && (
-              <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">
+              <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300 text-xs">
                 非承認
               </Badge>
             )}
           </div>
           <div>
             {isBroughtByUser ? (
-              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-xs">
                 持ち込み({providers.map((p) => p.provider).join(", ")})
               </Badge>
             ) : (
-              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 text-xs">
                 カフェ所有
               </Badge>
             )}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-shrink-0 w-full sm:w-[150px] h-[200px] sm:h-[150px] bg-gray-200 rounded-md overflow-hidden">
+      <CardContent className="space-y-2 p-2 sm:p-4">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+          <div className="flex-shrink-0 w-full sm:w-[150px] h-[120px] sm:h-[150px] bg-gray-200 rounded-md overflow-hidden">
             {game.box_image ? (
               <Image
                 src={`http://localhost:8000${game.box_image}`}
@@ -190,15 +198,15 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
             )}
           </div>
           <div className="flex-grow flex flex-col">
-            <div className="flex flex-wrap items-center gap-2 mb-2 sm:mb-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
+            <div className="flex flex-wrap items-center gap-1 mb-1 sm:mb-2 text-xs sm:text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
                 <span>
                   {game.min_playtime}〜{game.max_playtime}分
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
+              <div className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
                 <span>
                   {game.min_players}〜{game.max_players}人
                 </span>
@@ -206,32 +214,32 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
               {game.game_tags && game.game_tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {game.game_tags.map((tag, i) => (
-                    <Badge key={`tag-${i}`} variant="outline">
+                    <Badge key={`tag-${i}`} variant="outline" className="text-xs">
                       {tag}
                     </Badge>
                   ))}
                 </div>
               )}
             </div>
-            <p className="text-sm flex-grow">
+            <p className="text-xs sm:text-sm flex-grow line-clamp-3 sm:line-clamp-none">
               {game.short_description || game.long_description || "ゲームの説明がありません。"}
             </p>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex-col items-stretch gap-2">
+      <CardFooter className="flex-col items-stretch gap-1 p-2 sm:p-4">
         {!hasUserResponded ? (
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
-              className="w-32 border-destructive text-destructive hover:bg-destructive/10"
+              className="w-24 sm:w-32 border-destructive text-destructive hover:bg-destructive/10 text-xs sm:text-sm py-1 h-8"
               onClick={onDecline}
             >
-              <X className="h-4 w-4 mr-1" />
+              <X className="h-3 w-3 mr-1" />
               見送る
             </Button>
-            <Button variant="default" className="w-32" onClick={onAccept}>
-              <Check className="h-4 w-4 mr-1" />
+            <Button variant="default" className="w-24 sm:w-32 text-xs sm:text-sm py-1 h-8" onClick={onAccept}>
+              <Check className="h-3 w-3 mr-1" />
               遊びたい
             </Button>
           </div>
@@ -243,14 +251,14 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
           </div>
         )}
         {instructors && instructors.length > 0 && (
-          <div className="w-full mt-3 pt-3 border-t">
-            <div className="flex items-center gap-2 mb-1">
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm font-medium">説明できる人:</p>
+          <div className="w-full mt-2 pt-2 border-t">
+            <div className="flex items-center gap-1 mb-1 flex-wrap">
+              <BookOpen className="h-3 w-3 text-muted-foreground" />
+              <p className="text-xs sm:text-sm font-medium">説明できる人:</p>
 
               {instructors.map((instructor, i) => (
-                <Badge key={`instructor-${i}`} variant="secondary" className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
+                <Badge key={`instructor-${i}`} variant="secondary" className="flex items-center gap-1 text-xs">
+                  <User className="h-2 w-2" />
                   <span>{instructor.instructor}</span>
                 </Badge>
               ))}
@@ -258,14 +266,14 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
           </div>
         )}
         {acceptedParticipants && acceptedParticipants.length > 0 && (
-          <div className="w-full mt-3 pt-3 border-t">
-            <div className="flex items-center gap-2 mb-1">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm font-medium">遊びたい人:</p>
+          <div className="w-full mt-2 pt-2 border-t">
+            <div className="flex items-center gap-1 mb-1 flex-wrap">
+              <Users className="h-3 w-3 text-muted-foreground" />
+              <p className="text-xs sm:text-sm font-medium">遊びたい人:</p>
 
               {acceptedParticipants.map((participant, i) => (
-                <Badge key={`participant-${i}`} variant="secondary" className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
+                <Badge key={`participant-${i}`} variant="secondary" className="flex items-center gap-1 text-xs">
+                  <User className="h-2 w-2" />
                   <span>{participant.participant}</span>
                 </Badge>
               ))}
@@ -278,7 +286,7 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
 }
 
 // ゲーム提案コンポーネント
-const GameSuggestionComponent = ({ open, setOpen }) => {
+const GameSuggestionComponent = ({ open, setOpen, setMessages }) => {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedGame, setSelectedGame] = useState(null)
   const [selectedClass, setSelectedClass] = useState("all")
@@ -399,6 +407,7 @@ const GameSuggestionComponent = ({ open, setOpen }) => {
   const handleSelectGame = (item) => {
     // カフェゲームの場合は game プロパティを含む全体を保存
     setSelectedGame(item)
+    console.log("Selected game:", item)
   }
 
   // ゲームを提案する関数 - sourceパラメータを削除
@@ -413,8 +422,7 @@ const GameSuggestionComponent = ({ open, setOpen }) => {
         "http://localhost:8000/cafes/api/suggest_games/",
         {
           reservation: id,
-          game: activeTab === "cafe" ? selectedGame.game.id : selectedGame.id,
-          // sourceパラメータを削除
+          game: activeTab === "cafe" ? selectedGame.game.id : selectedGame.game.id,
         },
         {
           headers: {
@@ -430,11 +438,16 @@ const GameSuggestionComponent = ({ open, setOpen }) => {
       setSelectedGame(null)
       setSearchQuery("")
 
-      // 成功メッセージを表示（オプション）
-      alert("ゲームを提案しました")
+      // メッセージを再取得して画面を更新
+      const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      setMessages(response.data || [])
     } catch (error) {
       console.error("ゲーム提案に失敗しました:", error)
-      alert("ゲーム提案に失敗しました: " + (error.response?.data?.message || error.message))
+      console.error("エラーレスポンス:", error.response?.data)
     }
   }
 
@@ -490,7 +503,7 @@ const GameSuggestionComponent = ({ open, setOpen }) => {
 
           {/* カフェタブのゲーム表示部分を修正 */}
           <TabsContent value="cafe">
-            <ScrollArea className="h-[300px] rounded-md border p-2">
+            <ScrollArea className="h-[250px] sm:h-[300px] rounded-md border p-2">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <p>読み込み中...</p>
@@ -504,12 +517,12 @@ const GameSuggestionComponent = ({ open, setOpen }) => {
                       className={`mb-2 cursor-pointer hover:bg-gray-100 transition-colors ${selectedGame?.game?.id === game.id ? "border-2 border-primary" : ""}`}
                       onClick={() => handleSelectGame(item)}
                     >
-                      <CardContent className="p-4">
+                      <CardContent className="p-2 sm:p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h3 className="font-medium">{game.name}</h3>
+                            <h3 className="font-medium text-sm sm:text-base">{game.name}</h3>
                             {renderDesigners(game.designers)}
-                            <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm text-muted-foreground flex-wrap">
                               <div className="flex items-center">
                                 <Clock className="h-3 w-3 mr-1" />
                                 <span>
@@ -523,31 +536,38 @@ const GameSuggestionComponent = ({ open, setOpen }) => {
                                 </span>
                               </div>
                             </div>
-                            <p className="text-sm mt-2">{game.short_description}</p>
+                            <p className="text-xs sm:text-sm mt-1 line-clamp-2">{game.short_description}</p>
                           </div>
                           <div className="flex flex-col items-end gap-1 ml-2">
                             {game.game_class && game.game_class.length > 0 && (
-                              <Badge variant="outline">{game.game_class[0]}</Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {game.game_class[0]}
+                              </Badge>
                             )}
                           </div>
                         </div>
-                        <div className="flex justify-between items-end mt-2">
+                        <div className="flex justify-between items-end mt-2 flex-wrap gap-1">
                           {game.game_tags && game.game_tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
-                              {game.game_tags.map((tag, i) => (
-                                <Badge key={`tag-${i}`} variant="outline">
+                              {game.game_tags.slice(0, 3).map((tag, i) => (
+                                <Badge key={`tag-${i}`} variant="outline" className="text-xs">
                                   {tag}
                                 </Badge>
                               ))}
+                              {game.game_tags.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{game.game_tags.length - 3}
+                                </Badge>
+                              )}
                             </div>
                           )}
-                          <Badge variant="secondary" className="ml-auto flex items-center gap-1">
+                          <Badge variant="secondary" className="ml-auto flex items-center gap-1 text-xs">
                             <Users className="h-3 w-3" />
                             <span>遊びたい: {item.want_to_play_count}</span>
                           </Badge>
                         </div>
                         {game.box_image && (
-                          <div className="mt-2 w-full h-20 bg-gray-100 rounded overflow-hidden">
+                          <div className="mt-2 w-full h-16 sm:h-20 bg-gray-100 rounded overflow-hidden">
                             <Image
                               src={`http://localhost:8000${game.box_image}`}
                               alt={`${game.name} ボックスアート`}
@@ -571,7 +591,7 @@ const GameSuggestionComponent = ({ open, setOpen }) => {
           </TabsContent>
 
           <TabsContent value="bring">
-            <ScrollArea className="h-[300px] rounded-md border p-2">
+            <ScrollArea className="h-[250px] sm:h-[300px] rounded-md border p-2">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <p>読み込み中...</p>
@@ -585,12 +605,12 @@ const GameSuggestionComponent = ({ open, setOpen }) => {
                       className={`mb-2 cursor-pointer hover:bg-gray-100 transition-colors ${selectedGame?.game?.id === game.id ? "border-2 border-primary" : ""}`}
                       onClick={() => handleSelectGame(item)}
                     >
-                      <CardContent className="p-4">
+                      <CardContent className="p-2 sm:p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h3 className="font-medium">{game.name}</h3>
+                            <h3 className="font-medium text-sm sm:text-base">{game.name}</h3>
                             {renderDesigners(game.designers)}
-                            <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm text-muted-foreground flex-wrap">
                               <div className="flex items-center">
                                 <Clock className="h-3 w-3 mr-1" />
                                 <span>
@@ -604,31 +624,38 @@ const GameSuggestionComponent = ({ open, setOpen }) => {
                                 </span>
                               </div>
                             </div>
-                            <p className="text-sm mt-2">{game.short_description}</p>
+                            <p className="text-xs sm:text-sm mt-1 line-clamp-2">{game.short_description}</p>
                           </div>
                           <div className="flex flex-col items-end gap-1 ml-2">
                             {game.game_class && game.game_class.length > 0 && (
-                              <Badge variant="outline">{game.game_class[0]}</Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {game.game_class[0]}
+                              </Badge>
                             )}
                           </div>
                         </div>
-                        <div className="flex justify-between items-end mt-2">
+                        <div className="flex justify-between items-end mt-2 flex-wrap gap-1">
                           {game.game_tags && game.game_tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
-                              {game.game_tags.map((tag, i) => (
-                                <Badge key={`tag-${i}`} variant="outline">
+                              {game.game_tags.slice(0, 3).map((tag, i) => (
+                                <Badge key={`tag-${i}`} variant="outline" className="text-xs">
                                   {tag}
                                 </Badge>
                               ))}
+                              {game.game_tags.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{game.game_tags.length - 3}
+                                </Badge>
+                              )}
                             </div>
                           )}
-                          <Badge variant="secondary" className="ml-auto flex items-center gap-1">
+                          <Badge variant="secondary" className="ml-auto flex items-center gap-1 text-xs">
                             <Users className="h-3 w-3" />
                             <span>遊びたい: {item.want_to_play_count}</span>
                           </Badge>
                         </div>
                         {game.box_image && (
-                          <div className="mt-2 w-full h-20 bg-gray-100 rounded overflow-hidden">
+                          <div className="mt-2 w-full h-16 sm:h-20 bg-gray-100 rounded overflow-hidden">
                             <Image
                               src={`http://localhost:8000${game.box_image}`}
                               alt={`${game.name} ボックスアート`}
@@ -937,7 +964,7 @@ export default function ChatComponent() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-[calc(100vh-120px)] p-4" ref={scrollAreaRef}>
+        <ScrollArea className="h-[calc(100vh-100px)] p-2 sm:p-4" ref={scrollAreaRef}>
           {messages && messages.length > 0 ? (
             messages.map((message, index) => (
               <div key={index}>
@@ -946,9 +973,9 @@ export default function ChatComponent() {
                   !message.is_suggest &&
                   !message.is_system_message &&
                   !message.is_rule_approval && (
-                    <div className={`flex items-start mb-4 ${message.is_user_sender ? "justify-end" : ""}`}>
+                    <div className={`flex items-start mb-3 sm:mb-4 ${message.is_user_sender ? "justify-end" : ""}`}>
                       {!message.is_user_sender && (
-                        <Avatar className="mr-2">
+                        <Avatar className="mr-2 h-6 w-6 sm:h-8 sm:w-8">
                           <AvatarImage
                             src={
                               message.sender_profile_picture
@@ -960,19 +987,19 @@ export default function ChatComponent() {
                           <AvatarFallback>{message.sender[0]}</AvatarFallback>
                         </Avatar>
                       )}
-                      <div className={`max-w-[70%] ${message.is_user_sender ? "text-right" : ""}`}>
-                        <p className="text-sm font-medium">{message.sender}</p>
+                      <div className={`max-w-[75%] ${message.is_user_sender ? "text-right" : ""}`}>
+                        <p className="text-xs sm:text-sm font-medium">{message.sender}</p>
                         <div
                           className={`p-2 rounded-lg ${message.is_user_sender ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
                         >
-                          {message.content}
+                          <span className="text-xs sm:text-sm">{message.content}</span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {new Date(message.sent_at).toLocaleString("ja-JP")}
                         </p>
                       </div>
                       {message.is_user_sender && (
-                        <Avatar className="ml-2">
+                        <Avatar className="ml-2 h-6 w-6 sm:h-8 sm:w-8">
                           <AvatarImage
                             src={
                               message.sender_profile_picture
@@ -1005,7 +1032,7 @@ export default function ChatComponent() {
 
                 {/* ゲーム提案メッセージの表示 */}
                 {message.is_suggest && (
-                  <div className="w-full mb-4 px-2">
+                  <div className="w-full mb-3 sm:mb-4 px-1 sm:px-2">
                     <GameSuggestionMessage
                       message={message}
                       onAccept={() => handleAcceptGame(message)}
@@ -1020,7 +1047,7 @@ export default function ChatComponent() {
           )}
         </ScrollArea>
       </div>
-      <div className="p-4 border-t bg-background fixed bottom-16 left-0 right-0">
+      <div className="p-2 sm:p-4 border-t bg-background fixed bottom-12 sm:bottom-16 left-0 right-0">
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -1032,11 +1059,17 @@ export default function ChatComponent() {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="メッセージを入力..."
-            className="flex-1"
+            className="flex-1 text-sm h-9"
           />
 
           {/* ゲーム提案ボタン - ダイアログとドロップダウンを分離 */}
-          <Button variant="outline" size="icon" type="button" onClick={() => setGameSuggestionOpen(true)}>
+          <Button
+            variant="outline"
+            size="icon"
+            type="button"
+            onClick={() => setGameSuggestionOpen(true)}
+            className="h-9 w-9"
+          >
             <Search className="h-4 w-4" />
           </Button>
 
@@ -1055,13 +1088,17 @@ export default function ChatComponent() {
               }
             }}
           >
-            <GameSuggestionComponent open={gameSuggestionOpen} setOpen={setGameSuggestionOpen} />
+            <GameSuggestionComponent
+              open={gameSuggestionOpen}
+              setOpen={setGameSuggestionOpen}
+              setMessages={setMessages}
+            />
           </Dialog>
 
           {/* 他のアクション用のドロップダウンを分離 */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" className="h-9 w-9">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -1070,7 +1107,9 @@ export default function ChatComponent() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button type="submit">送信</Button>
+          <Button type="submit" className="h-9 text-sm">
+            送信
+          </Button>
         </form>
       </div>
     </div>

@@ -462,34 +462,13 @@ class SuggestGameViewSet(viewsets.ModelViewSet):
         """
         POSTリクエストで予約IDとゲームIDを元にSuggestGameを作成
         """
-        reservation_id = request.data.get('reservation')
-        print(reservation_id)
-        game_id = request.data.get('game')
-        print(game_id)
-        source = request.data.get('source')  # "cafe" または "bring" といったソースの指定
-
-        try:
-            # Reservationを取得
-            reservation = Reservation.objects.get(id=reservation_id)
-            print(reservation)
-        except Reservation.DoesNotExist:
-            return Response({"detail": "Reservation not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         
-        try:
-            # BoardGameを取得
-            game = BoardGame.objects.get(id=game_id)
-            print(game)
-        except BoardGame.DoesNotExist:
-            return Response({"detail": "Game not found."}, status=status.HTTP_404_NOT_FOUND)
+        # シリアライザのcreateメソッドを使用して作成
+        suggest_game = serializer.save()
         
-        message = Message.objects.create(reservation=reservation,is_public=False,is_suggest=True)
-        suggestgame = SuggestGame.objects.create(message=message,suggest_game=game)
-
-        
-        # 作成したSuggestGameのデータを返す
-        serializer = self.get_serializer(suggestgame)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
 
 
 

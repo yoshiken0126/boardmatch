@@ -184,6 +184,30 @@ class SuggestGameSerializer(serializers.ModelSerializer):
             return BoardGameSerializer(obj.suggest_game).data
         return None
 
+    def create(self, validated_data):
+        # reservationとgameを取り出す
+        reservation = validated_data.pop('reservation')
+        game = validated_data.pop('game')
+        
+        # まずMessageを作成
+        message = Message.objects.create(
+            reservation=reservation,
+            is_public=False,
+            is_suggest=True
+        )
+        
+        # SuggestGameを作成
+        suggest_game = SuggestGame.objects.create(
+            message=message,
+            suggest_game=game,
+            **validated_data  # その他のフィールドがあれば
+        )
+        suggest_game.save()
+        
+        return suggest_game
+
+    
+
     
 
 

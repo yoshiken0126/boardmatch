@@ -28,14 +28,18 @@ from django_filters.rest_framework import DjangoFilterBackend
 from accounts.permissions import IsCustomUser,IsCustomUserOrIsStaffUser
 from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant,CafeGameRelation,Message,SuggestGame
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 
-
-
+class BoardGamePagination(PageNumberPagination):
+    page_size = 12  # 1ページあたりのボードゲーム数
+    page_size_query_param = 'page_size'  # クライアントがページサイズを変更できるようにするパラメータ
+    max_page_size = 100  # 最大ページサイズの制限
 
 # Create your views here.
 class BoardGameViewSet(viewsets.ModelViewSet):
     queryset = BoardGame.objects.all()
     serializer_class = BoardGameSerializer
+    pagination_class = BoardGamePagination  # ページネーションクラスを適用
     
 
 class BoardGameCafeList(generics.ListCreateAPIView):
@@ -814,7 +818,7 @@ def get_user_free_time(user):
 
 def try_optimize(request):
     cafes = BoardGameCafe.objects.all()
-    active_users = CustomUser.objects.filter(is_optimize_active=True)
+    active_users = CustomUser.objects.filter(is_optimize_active=True,game_class__name='中量級')
     user_index_map = {user.id: index for index, user in enumerate(active_users)}
     num_users = len(active_users)
     num_cafes = len(cafes)
@@ -970,7 +974,7 @@ def try_optimize(request):
 
     for user in active_users:
         may_follow_relations = UserRelation.objects.filter(from_user=user)
-        may_follow_list1 = [user_index_map[relation.to_user.id] for relation in may_follow_relations if relation.may_follow]
+        may_follow_list1 = [user_index_map[relation.to_user.id] for relation in may_follow_relations if relation.may_follow and relation.to_user.id in user_index_map]
         may_follow_list2.append(may_follow_list1)
 
     #それぞれのインデックスを基に対応するインデックスの変数を取得する。
@@ -1185,5 +1189,5 @@ def try_optimize(request):
     outcome = m.objective_value
 
     a = get_next_4_weeks_dates()
-    print(a)
+    print(val_x)
     return HttpResponse(val_x)

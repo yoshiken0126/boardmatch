@@ -10,6 +10,8 @@ class CustomUserAdmin(admin.ModelAdmin):
     # ゲームクラスと都道府県を編集フォームに追加
     fields = ('username', 'email', 'is_optimize_active', 'game_class', 'prefecture', 'profile_picture')
 
+    filter_horizontal = ('game_class','prefecture')
+
     # 検索機能を追加
     search_fields = ('username', 'email')
 

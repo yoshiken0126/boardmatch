@@ -1,86 +1,229 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import axios from "axios"
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Loader2 } from "lucide-react"
 import { getToken } from "@/lib/auth"
 
 export default function Home() {
   const [boardgames, setBoardgames] = useState([])
   const [userBoardGames, setUserBoardGames] = useState([])
-  const [switchStates, setSwitchStates] = useState({})
+  const [gameRelations, setGameRelations] = useState({})
   const [error, setError] = useState(null)
+  const [openDialog, setOpenDialog] = useState(null)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const observerRef = useRef(null)
   const token = getToken()
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [boardgamesResponse, userGamesResponse] = await Promise.all([
-          axios.get("http://localhost:8000/match/api/boardgames/"),
-          axios.get("http://localhost:8000/match/api/user_game_relations/", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-        ])
-        console.log(boardgamesResponse)
+  const fetchBoardgames = async (pageNum) => {
+    try {
+      setLoading(true)
+      const boardgamesResponse = await axios.get(`http://localhost:8000/match/api/boardgames/?page=${pageNum}`)
 
-        setBoardgames(boardgamesResponse.data)
-        setUserBoardGames(userGamesResponse.data)
+      // Check if we have more pages
+      setHasMore(boardgamesResponse.data.next !== null)
 
-        const initialSwitchStates = userGamesResponse.data.reduce((acc, game) => {
-          acc[game.game] = game.want_to_play
-          return acc
-        }, {})
-
-        setSwitchStates(initialSwitchStates)
-      } catch (error) {
-        setError(error.message)
-        console.error("データ取得エラー:", error)
+      // If it's the first page, replace the data, otherwise append
+      if (pageNum === 1) {
+        setBoardgames(boardgamesResponse.data.results)
+      } else {
+        setBoardgames((prev) => [...prev, ...boardgamesResponse.data.results])
       }
+
+      return boardgamesResponse.data.results
+    } catch (error) {
+      setError(error.message)
+      console.error("ボードゲーム取得エラー:", error)
+      return []
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchUserGameRelations = async () => {
+    try {
+      const userGamesResponse = await axios.get("http://localhost:8000/match/api/user_game_relations/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      setUserBoardGames(userGamesResponse.data)
+
+      // Initialize game relations with all properties
+      const initialRelations = {}
+      userGamesResponse.data.forEach((relation) => {
+        if (!initialRelations[relation.game]) {
+          initialRelations[relation.game] = {
+            want_to_play: false,
+            can_instruct: false,
+            not_for_me: false,
+            is_having: false,
+            relationId: null,
+          }
+        }
+
+        // Update with actual values from the relation
+        initialRelations[relation.game] = {
+          want_to_play: relation.want_to_play,
+          can_instruct: relation.can_instruct,
+          not_for_me: relation.not_for_me,
+          is_having: relation.is_having,
+          relationId: relation.id,
+        }
+      })
+
+      setGameRelations(initialRelations)
+    } catch (error) {
+      console.error("ユーザーゲーム関係取得エラー:", error)
+    }
+  }
+
+  // Initial data load
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      await fetchBoardgames(1)
+      await fetchUserGameRelations()
     }
 
-    fetchData()
+    fetchInitialData()
   }, [token])
 
-  const handleSwitchChange = async (gameId, checked) => {
+  // Setup intersection observer for infinite scrolling
+  const lastBoardgameRef = useCallback(
+    (node) => {
+      if (loading) return
+
+      if (observerRef.current) observerRef.current.disconnect()
+
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setPage((prevPage) => prevPage + 1)
+        }
+      })
+
+      if (node) observerRef.current.observe(node)
+    },
+    [loading, hasMore],
+  )
+
+  // Load more data when page changes
+  useEffect(() => {
+    if (page > 1) {
+      fetchBoardgames(page)
+    }
+  }, [page])
+
+  const handleRelationChange = async (gameId, property, checked) => {
     try {
+      const currentRelation = gameRelations[gameId] || {
+        want_to_play: false,
+        can_instruct: false,
+        not_for_me: false,
+        is_having: false,
+        relationId: null,
+      }
+
+      // Create a new relation object with the updated property
+      const updatedRelation = {
+        ...currentRelation,
+        [property]: checked,
+      }
+
+      // If turning ON a property
       if (checked) {
-        const response = await axios.post(
-          "http://localhost:8000/match/api/user_game_relations/",
-          { game: gameId, want_to_play: true },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        )
-        setSwitchStates((prev) => ({ ...prev, [gameId]: true }))
-      } else {
-        const relationsResponse = await axios.get(
-          `http://localhost:8000/match/api/user_game_relations/?game_id=${gameId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        )
-
-        const relationToDelete = relationsResponse.data.find((relation) => relation.game === gameId)
-
-        if (relationToDelete) {
-          await axios.delete(`http://localhost:8000/match/api/user_game_relations/${relationToDelete.id}/`, {
+        // If we already have a relation, delete it first
+        if (currentRelation.relationId) {
+          await axios.delete(`http://localhost:8000/match/api/user_game_relations/${currentRelation.relationId}/`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           })
-          setSwitchStates((prev) => ({ ...prev, [gameId]: false }))
+        }
+
+        // Create a new relation with the updated property
+        const response = await axios.post(
+          "http://localhost:8000/match/api/user_game_relations/",
+          {
+            game: gameId,
+            want_to_play: updatedRelation.want_to_play,
+            can_instruct: updatedRelation.can_instruct,
+            not_for_me: updatedRelation.not_for_me,
+            is_having: updatedRelation.is_having,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        )
+
+        // Update the relation ID
+        updatedRelation.relationId = response.data.id
+      }
+      // If turning OFF a property
+      else {
+        // If we have a relation, delete it
+        if (currentRelation.relationId) {
+          await axios.delete(`http://localhost:8000/match/api/user_game_relations/${currentRelation.relationId}/`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+
+          // If there are other properties still ON, create a new relation
+          if (
+            updatedRelation.want_to_play ||
+            updatedRelation.can_instruct ||
+            updatedRelation.not_for_me ||
+            updatedRelation.is_having
+          ) {
+            const response = await axios.post(
+              "http://localhost:8000/match/api/user_game_relations/",
+              {
+                game: gameId,
+                want_to_play: updatedRelation.want_to_play,
+                can_instruct: updatedRelation.can_instruct,
+                not_for_me: updatedRelation.not_for_me,
+                is_having: updatedRelation.is_having,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              },
+            )
+
+            // Update the relation ID
+            updatedRelation.relationId = response.data.id
+          } else {
+            // If all properties are OFF, set relationId to null
+            updatedRelation.relationId = null
+          }
         }
       }
+
+      // Update state
+      setGameRelations((prev) => ({
+        ...prev,
+        [gameId]: updatedRelation,
+      }))
     } catch (error) {
       console.error("スイッチ操作エラー:", error)
-      setSwitchStates((prev) => ({ ...prev, [gameId]: !checked }))
+      // Revert the switch state on error
+      setGameRelations((prev) => ({
+        ...prev,
+        [gameId]: {
+          ...prev[gameId],
+          [property]: !checked,
+        },
+      }))
     }
   }
 
@@ -90,87 +233,138 @@ export default function Home() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {boardgames.length === 0 ? (
+      {boardgames.length === 0 && !loading ? (
         <p className="text-center text-lg">ボードゲームは登録されていません</p>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {boardgames.map((boardgame) => (
-            <Card key={boardgame.id} className="relative w-full rounded-md overflow-hidden">
-              <div className="flex p-6">
-                <div className="w-40 h-40 relative flex-shrink-0 bg-gray-200 rounded-md mr-6">
-                  {boardgame.box_image && (
-                    <img
-                      src={boardgame.box_image || "/placeholder.svg"}
-                      alt={`${boardgame.name} box`}
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <CardHeader className="p-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2 flex-grow">
-                        <CardTitle className="text-xl font-bold truncate">{boardgame.name}</CardTitle>
-                        <div className="flex space-x-1">
-                          {boardgame.game_class &&
-                            boardgame.game_class.map((classItem, index) => (
-                              <span
-                                key={index}
-                                className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded-full"
-                              >
-                                {classItem}
-                              </span>
-                            ))}
-                        </div>
-                      </div>
-                      <Switch
-                        checked={switchStates[boardgame.id] || false}
-                        onCheckedChange={(checked) => handleSwitchChange(boardgame.id, checked)}
-                        className="ml-2"
+          {boardgames.map((boardgame, index) => {
+            // Add ref to the last item for infinite scrolling
+            const isLastItem = index === boardgames.length - 1
+            return (
+              <Card
+                key={boardgame.id}
+                className="relative w-full rounded-md overflow-hidden"
+                ref={isLastItem ? lastBoardgameRef : null}
+              >
+                <div className="flex flex-col md:flex-row p-4 md:p-6">
+                  <div className="w-full md:w-40 h-40 relative flex-shrink-0 bg-gray-200 rounded-md md:mr-6 mb-4 md:mb-0">
+                    {boardgame.box_image && (
+                      <img
+                        src={boardgame.box_image || "/placeholder.svg"}
+                        alt={`${boardgame.name} box`}
+                        className="w-full h-full object-cover rounded-md"
                       />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <CardDescription className="text-sm space-y-1">
-                      {boardgame.designers.length > 0 && (
-                        <p className="truncate">デザイナー: {boardgame.designers.join(", ")}</p>
-                      )}
-                      <p>
-                        プレイ人数: {boardgame.min_players}-{boardgame.max_players}人
-                      </p>
-                      <p>
-                        プレイ時間: {boardgame.min_playtime}-{boardgame.max_playtime}分
-                      </p>
-                    </CardDescription>
-                  </CardContent>
-                  <CardFooter className="flex justify-start items-end p-0 mt-4">
-                    <div className="flex flex-wrap gap-1">
-                      {boardgame.game_tags &&
-                        boardgame.game_tags.map((tag, index) => (
-                          <span key={index} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-                            {tag}
-                          </span>
-                        ))}
-                    </div>
-                  </CardFooter>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <CardHeader className="p-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2 flex-grow">
+                          <CardTitle className="text-xl font-bold truncate">{boardgame.name}</CardTitle>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {boardgame.game_class &&
+                              boardgame.game_class.map((classItem, index) => (
+                                <span
+                                  key={index}
+                                  className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded-full"
+                                >
+                                  {classItem}
+                                </span>
+                              ))}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={gameRelations[boardgame.id]?.want_to_play || false}
+                          onCheckedChange={(checked) => handleRelationChange(boardgame.id, "want_to_play", checked)}
+                          className="ml-2 flex-shrink-0"
+                        />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0 flex-grow">
+                      <CardDescription className="text-sm space-y-1">
+                        {boardgame.designers.length > 0 && (
+                          <p className="truncate">デザイナー: {boardgame.designers.join(", ")}</p>
+                        )}
+                        <p>
+                          プレイ人数: {boardgame.min_players}-{boardgame.max_players}人
+                        </p>
+                        <p>
+                          プレイ時間: {boardgame.min_playtime}-{boardgame.max_playtime}分
+                        </p>
+                      </CardDescription>
+                    </CardContent>
+                    <CardFooter className="flex justify-between items-end p-0 mt-4">
+                      <div className="flex flex-wrap gap-1 max-w-[80%]">
+                        {boardgame.game_tags &&
+                          boardgame.game_tags.map((tag, index) => (
+                            <span key={index} className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                      </div>
+                      <Dialog
+                        open={openDialog === boardgame.id}
+                        onOpenChange={(open) => setOpenDialog(open ? boardgame.id : null)}
+                      >
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            詳細
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>{boardgame.name} の設定</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="flex items-center justify-between">
+                              <span>やりたいゲーム</span>
+                              <Switch
+                                checked={gameRelations[boardgame.id]?.want_to_play || false}
+                                onCheckedChange={(checked) =>
+                                  handleRelationChange(boardgame.id, "want_to_play", checked)
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>説明できるゲーム</span>
+                              <Switch
+                                checked={gameRelations[boardgame.id]?.can_instruct || false}
+                                onCheckedChange={(checked) =>
+                                  handleRelationChange(boardgame.id, "can_instruct", checked)
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>持って行けるゲーム</span>
+                              <Switch
+                                checked={gameRelations[boardgame.id]?.is_having || false}
+                                onCheckedChange={(checked) => handleRelationChange(boardgame.id, "is_having", checked)}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>合わないゲーム</span>
+                              <Switch
+                                checked={gameRelations[boardgame.id]?.not_for_me || false}
+                                onCheckedChange={(checked) => handleRelationChange(boardgame.id, "not_for_me", checked)}
+                              />
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </CardFooter>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            )
+          })}
+          {loading && (
+            <div className="flex justify-center items-center py-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
         </div>
       )}
     </div>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
 

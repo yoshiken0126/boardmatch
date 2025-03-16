@@ -543,6 +543,20 @@ class SuggestGameViewSet(viewsets.ModelViewSet):
 
 
 def otamesi(request):
+    active_users = CustomUser.objects.filter(
+        is_optimize_active=True,
+        game_class__name='重量級'  # GameClass の name が "重量級" であること
+    )
+    user_index_map = {user.id: index for index, user in enumerate(active_users)}
+    may_follow_list2 = []
+
+    for user in active_users:
+        may_follow_relations = UserRelation.objects.filter(from_user=user)
+        may_follow_list1 = [user_index_map[relation.to_user.id] for relation in may_follow_relations if relation.may_follow and relation.to_user.id in user_index_map]
+        may_follow_list2.append(may_follow_list1)
+
+    print(user_index_map)
+
     return HttpResponse('お試し')
 
 def register_boardgame(request):

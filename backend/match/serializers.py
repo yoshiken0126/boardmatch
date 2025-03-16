@@ -66,7 +66,7 @@ class UserGameRelationSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserGameRelation
         #fields = ['id','game','want_to_play']
-        fields = ['id', 'user', 'game', 'want_to_play']
+        fields = ['id', 'user', 'game', 'want_to_play','can_instruct','not_for_me','is_having']
         read_only_fields = ['user']
 
 class UserFreeTimeSerializer(serializers.ModelSerializer):

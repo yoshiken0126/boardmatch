@@ -158,6 +158,26 @@ class Reservation(models.Model):
 
         super().save(*args, **kwargs)  # 親クラスの save メソッドを呼び出す
 
+    def get_reservation_time_string(self):
+        # timeslot に関連付けられた TableTimeSlot の情報を取得
+        if self.timeslot.exists():
+            # 最初と最後のタイムスロットを取得
+            first_timeslot = self.timeslot.first()
+            last_timeslot = self.timeslot.last()
+
+            # 最初のタイムスロットの開始時間（常にローカルタイムに変換）
+            start_time = first_timeslot.timeslot_range.lower
+            start_time = timezone.localtime(start_time)
+
+            # 最後のタイムスロットの終了時間（常にローカルタイムに変換）
+            end_time = last_timeslot.timeslot_range.upper
+            end_time = timezone.localtime(end_time)
+
+            # フォーマットして文字列で返す（年なしで月日と時刻だけ）
+            return f"{start_time.strftime('%m月%d日  %H:%M')} から {end_time.strftime('%H:%M')} まで"
+        
+        return "予約なし"
+
 
 class PlayGame(models.Model):
     reservation = models.ForeignKey('Reservation', on_delete=models.CASCADE)  # 予約に紐づく

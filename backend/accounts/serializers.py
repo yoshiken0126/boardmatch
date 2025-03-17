@@ -3,10 +3,11 @@ from .models import CustomUser,CafeStaff
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class CustomUserSerializer(serializers.ModelSerializer): #追記　Userのシリアライザー
+    game_class = serializers.StringRelatedField(many=True)
     
     class Meta:
         model = CustomUser
-        fields = ('id', 'username','password','is_optimize_active','email','profile_picture')
+        fields = ('id', 'username','password','is_optimize_active','email','profile_picture','game_class')
         extra_kwargs = {'password':{'write_only': True}} #パスワードフィールドを書き込み専用にする
     
     def create(self, validated_data):#create時にcreate_userメソッドを使用

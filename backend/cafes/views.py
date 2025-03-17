@@ -403,20 +403,28 @@ class UserHaveSuggestGameViewSet(viewsets.ModelViewSet):
             unique_game_relations = UserGameRelation.objects.filter(
                 game__id__in=not_in_cafe_game_ids
             ).distinct('game__id')  # PostgreSQLの場合
+            print(unique_game_relations)
 
             # ゲームクラスのフィルタリング
             filtered_relations = []
             if player_class in game_class_mapping:
                 # ゲームクラスが指定されている場合、そのクラスにマッチするゲームだけをフィルタリング
                 mapped_class_name = game_class_mapping[player_class]
+                print(f"Filtering for class: {mapped_class_name}")
                 for relation in unique_game_relations:
-                    if relation.game.game_class.name == mapped_class_name:
-                        filtered_relations.append(relation)
+                    # relation.game.game_class.all()で関連するすべてのGameClassを取得
+                    for game_class in relation.game.game_class.all():
+                        # 各GameClassのnameとmapped_class_nameを比較
+                        if game_class.name == mapped_class_name:
+                            print(f"Game: {relation.game.name}, Class: {game_class.name}")
+                            filtered_relations.append(relation)
+                            break  # マッチした場合、次のrelationに進む
             else:
                 # ゲームクラスが指定されていない場合は全てのゲームを取得
                 filtered_relations = list(unique_game_relations)
 
             # ゲームごとにwant_to_play=Trueのユーザー数をカウント
+            print(filtered_relations)
             result = []
             for relation in filtered_relations:
                 game = relation.game

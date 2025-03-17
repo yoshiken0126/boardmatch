@@ -18,7 +18,7 @@ import datetime,random
 
 
 from accounts.serializers import CustomUserSerializer
-from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer,ReservationSerializer,ParticipantSerializer,UserFreeDaySerializer,UserHaveGameSerializer,CafeHaveGameSerializer
+from .serializers import BoardGameSerializer,UserGameRelationSerializer,UserCafeRelationSerializer,UserFreeTimeSerializer,BoardGameCafeSerializer,UserRelationSerializer,ReservationSerializer,ParticipantSerializer,UserFreeDaySerializer,UserHaveGameSerializer,CafeHaveGameSerializer,UserGameClassSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -375,7 +375,19 @@ class ParticipantViewSet(viewsets.ModelViewSet):
             return Response({"message": "あなたはこの予約に参加していません。"}, status=400)
 
 
+class UserGameClassViewSet(viewsets.ModelViewSet):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserGameClassSerializer
+    permission_classes = [IsCustomUser]
 
+    # GETリクエストで特定のユーザー情報を取得
+    def get_queryset(self):
+        user = self.request.user  # ログインユーザー
+        return CustomUser.objects.filter(id=user.id)
+
+    # POST、PATCHリクエストでの更新を許可
+    def perform_update(self, serializer):
+        serializer.save()
 
 
 

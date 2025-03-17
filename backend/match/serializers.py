@@ -358,3 +358,31 @@ class ParticipantSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("指定された参加者はこの予約に参加していません。")
         
         return reservation
+
+
+class GameClassSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GameClass
+        fields = ['id', 'name']
+
+class UserGameClassSerializer(serializers.ModelSerializer):
+    game_class = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
+    game_class_display = GameClassSerializer(source='game_class', many=True, read_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email', 'game_class', 'game_class_display', 'profile_picture', 'is_optimize_active']
+
+    def update(self, instance, validated_data):
+        # game_classの更新
+        game_class_names = validated_data.pop('game_class', None)
+        if game_class_names is not None:
+            game_classes = [GameClass.objects.get(name=name) for name in game_class_names]
+            instance.game_class.set(game_classes)
+
+        # その他のフィールドの更新
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+        return instance

@@ -13,17 +13,52 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Menu, Blocks, ChevronDown } from "lucide-react"
+import { Menu, Blocks, ChevronDown, Medal } from "lucide-react"
 import { useAuth } from "@/app/context/AuthContext"
 import { Switch } from "@/components/ui/switch"
 import { getToken } from "@/lib/auth"
 
+
 // Update the UserDropdown component to use the fetched user data
-function UserDropdown({ userData, logout }) {
+function UserDropdown({ userData, logout, updateUserGameClass }) {
   if (!userData) return null
 
   const handleLogout = () => {
     logout()
+  }
+
+  // ゲームクラスのラベルと色を定義
+  const gameClassColors = {
+    軽量級: "bg-blue-100 text-blue-800",
+    中量級: "bg-green-100 text-green-800",
+    重量級: "bg-purple-100 text-purple-800",
+  }
+
+  // 全てのゲームクラス
+  const allGameClasses = ["軽量級", "中量級", "重量級"]
+
+  // クラスの切り替え処理
+  const handleClassToggle = async (gameClass, isChecked) => {
+    const currentClasses = [...(userData.game_class || [])]
+    let updatedClasses
+    if (isChecked) {
+      updatedClasses = [...currentClasses, gameClass]
+    } else {
+      if (currentClasses.length <= 1) {
+        // トースト表示部分を削除
+        console.error("少なくとも1つのクラスに所属する必要があります")
+        return false
+      }
+      updatedClasses = currentClasses.filter((c) => c !== gameClass)
+    }
+  
+    const success = await updateUserGameClass(updatedClasses)
+    return success
+  }
+
+  // クラスがユーザーの所属クラスに含まれているかチェック
+  const isClassActive = (gameClass) => {
+    return userData.game_class && userData.game_class.includes(gameClass)
   }
 
   return (
@@ -43,6 +78,34 @@ function UserDropdown({ userData, logout }) {
             <p className="text-xs leading-none text-muted-foreground">{userData.email}</p>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+
+        {/* ゲームクラス情報を表示 */}
+        <div className="px-2 py-1.5">
+          <p className="text-xs font-medium mb-1.5 flex items-center">
+            <Medal className="h-3.5 w-3.5 mr-1" />
+            所属クラス
+          </p>
+
+          {/* クラス切り替えスイッチ */}
+          <div className="space-y-2 mt-1">
+            {allGameClasses.map((gameClass) => (
+              <div key={gameClass} className="flex items-center justify-between">
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full ${gameClassColors[gameClass] || "bg-gray-100 text-gray-800"}`}
+                >
+                  {gameClass}
+                </span>
+                <Switch
+                  checked={isClassActive(gameClass)}
+                  onCheckedChange={(checked) => handleClassToggle(gameClass, checked)}
+                  aria-label={`${gameClass}に所属する`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
         <DropdownMenuSeparator />
         <DropdownMenuItem>プロフィール</DropdownMenuItem>
         <DropdownMenuItem>設定</DropdownMenuItem>
@@ -118,6 +181,42 @@ export default function Navbar() {
       }
     } catch (error) {
       console.error("ユーザーの最適化設定の更新に失敗しました:", error)
+    }
+  }
+
+  // ゲームクラスを更新する関数
+  const updateUserGameClass = async (gameClasses) => {
+    try {
+      const token = localStorage.getItem("token")
+      const userId = JSON.parse(atob(token.split(".")[1])).user_id
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+  
+      const response = await axios.patch(
+        `http://localhost:8000/match/api/user_game_class/${userId}/`,
+        { game_class: gameClasses },
+        config,
+      )
+  
+      if (response.status === 200) {
+        console.log("ユーザーのゲームクラスが更新されました", response.data)
+        setUserData((prev) => ({
+          ...prev,
+          game_class: response.data.game_class || gameClasses,
+        }))
+        return true
+      } else {
+        console.error("ユーザーのゲームクラスの更新に失敗しました")
+        return false
+      }
+    } catch (error) {
+      console.error("ユーザーのゲームクラスの更新に失敗しました:", error)
+      // トースト表示部分を削除
+      console.error("ゲームクラスの更新に失敗しました: " + (error.response?.data?.message || error.message))
+      return false
     }
   }
 
@@ -277,7 +376,7 @@ export default function Navbar() {
             ) : (
               <span className="text-sm font-medium text-gray-700">ローディング中...</span>
             )}
-            {userData && <UserDropdown userData={userData} logout={logout} />}
+            {userData && <UserDropdown userData={userData} logout={logout} updateUserGameClass={updateUserGameClass} />}
           </div>
 
           <div className="flex items-center space-x-4">
@@ -320,6 +419,63 @@ export default function Navbar() {
                           </div>
                         </div>
                       </DropdownMenuLabel>
+
+                      {/* モバイル表示でもゲームクラス情報とスイッチを表示 */}
+                      <div className="px-2 py-1.5">
+                        <p className="text-xs font-medium mb-1.5 flex items-center">
+                          <Medal className="h-3.5 w-3.5 mr-1" />
+                          所属クラス
+                        </p>
+                        <div className="space-y-2 mt-1">
+                          {["軽量級", "中量級", "重量級"].map((gameClass) => (
+                            <div key={gameClass} className="flex items-center justify-between">
+                              <span
+                                className={`text-xs px-2 py-0.5 rounded-full ${
+                                  gameClass === "軽量級"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : gameClass === "中量級"
+                                      ? "bg-green-100 text-green-800"
+                                      : gameClass === "重量級"
+                                        ? "bg-purple-100 text-purple-800"
+                                        : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {gameClass}
+                              </span>
+                              <Switch
+                                checked={userData.game_class && userData.game_class.includes(gameClass)}
+                                onCheckedChange={(checked) => {
+                                  // 現在のゲームクラス配列をコピー
+                                  const currentClasses = [...(userData.game_class || [])]
+
+                                  // クラスが選択された場合は追加、選択解除された場合は削除
+                                  let updatedClasses
+                                  if (checked) {
+                                    updatedClasses = [...currentClasses, gameClass]
+                                  } else {
+                                    // 少なくとも1つのクラスは残す必要がある
+                                    if (currentClasses.length <= 1) {
+                                      toast({
+                                        title: "エラー",
+                                        description: "少なくとも1つのクラスに所属する必要があります",
+                                        variant: "destructive",
+                                      })
+                                      return
+                                    }
+                                    updatedClasses = currentClasses.filter((c) => c !== gameClass)
+                                  }
+
+                                  // バックエンドAPIを呼び出してゲームクラスを更新
+                                  updateUserGameClass(updatedClasses)
+                                }}
+                                aria-label={`${gameClass}に所属する`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem>プロフィール</DropdownMenuItem>
                       <DropdownMenuItem>設定</DropdownMenuItem>
                       <DropdownMenuItem onClick={logout}>ログアウト</DropdownMenuItem>
@@ -334,6 +490,4 @@ export default function Navbar() {
     </nav>
   )
 }
-
-
 

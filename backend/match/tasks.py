@@ -297,8 +297,11 @@ def run_optimization():
                     user.is_optimize_active = False
                     user.save()
                     participant = Participant.objects.create(reservation=reservation,user=user)
+
+                reservation_time = reservation.get_reservation_time_string()
+                participant_names = list(reservation.participant.values_list('username', flat=True))
                 message = Message.objects.create(reservation=reservation,is_public=False,is_system_message=True,content=
-                f'マッチングに成功しました。\n場所:{cafe.name}\n日時:\n遊びたいゲームを選択してください。')
+                f'マッチングに成功しました。\n\n場所:{cafe.name}\n日時:{reservation_time}\nクラス:{game_class}\n参加者:{participant_names}\n\n遊ぶゲームを決定してください。')
 
 
                 

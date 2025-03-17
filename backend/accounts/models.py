@@ -38,7 +38,19 @@ class CustomUser(BaseUser):
         # 新規作成時にuser_typeを自動設定
         if not self.pk:  # 新規オブジェクトの場合
             self.user_type = 'custom_user'
+        
+        # 親クラスの save を呼び出す
         super().save(*args, **kwargs)
+
+        # デフォルトで軽量級、中量級、重量級を作成して紐づける
+        if not self.game_class.exists():  # game_classが空の場合に追加
+            light_class, _ = GameClass.objects.get_or_create(name='軽量級')
+            middle_class, _ = GameClass.objects.get_or_create(name='中量級')
+            heavy_class, _ = GameClass.objects.get_or_create(name='重量級')
+
+            # ManyToManyField に追加
+            self.game_class.add(light_class, middle_class, heavy_class)
+
 
 class CafeStaff(BaseUser):
     cafe =models.ForeignKey('accounts.BoardGameCafe',on_delete=models.CASCADE)

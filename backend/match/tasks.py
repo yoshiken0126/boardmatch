@@ -3,7 +3,7 @@ from datetime import datetime
 from accounts.models import BoardGameCafe,CustomUser,BoardGame,GameClass
 from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant,Message
 from match.models import UserCafeRelation, UserRelation
-from match.views import get_user_free_time,get_available_table_counts_for_4_weeks,generate_time_slots_for_4_weeks,get_available_table_ids_for_4_weeks
+from match.views import get_user_free_time,get_available_table_counts_for_4_weeks,generate_time_slots_for_4_weeks,get_available_table_ids_for_4_weeks,create_all_cafes_six_weeks_later_timeslots
 import random
 import numpy as np
 from mip import Model,maximize,xsum
@@ -335,6 +335,9 @@ def run_optimization():
         outcome = m.objective_value
 
         print(val_x)
+    
+    create_all_cafes_six_weeks_later_timeslots()
+
 
                 
 

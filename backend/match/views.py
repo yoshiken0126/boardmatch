@@ -857,7 +857,68 @@ def get_user_free_time(user):
     
     return result
 
+def create_all_cafes_six_weeks_later_timeslots():
+    from datetime import timedelta, datetime
+    from django.utils import timezone
+    # 全てのカフェテーブルを取得
+    cafe_tables = CafeTable.objects.all()
 
+    # 曜日の対応表
+    weekday_names = {
+        0: 'monday',
+        1: 'tuesday',
+        2: 'wednesday',
+        3: 'thursday',
+        4: 'friday',
+        5: 'saturday',
+        6: 'sunday'
+    }
+
+    # 各カフェテーブルで6週間後のタイムスロットを作成
+    for cafe_table in cafe_tables:
+        # 6週間後の月曜日を計算
+        created_at = cafe_table.created_at if hasattr(cafe_table, 'created_at') else timezone.now()
+        start_of_week = created_at + timedelta(weeks=5) - timedelta(days=created_at.weekday())
+
+        # デフォルトの営業時間を取得
+        default_opening = cafe_table.cafe.opening_time
+        default_closing = cafe_table.cafe.closing_time
+
+        # 6週間後の1週間分のタイムスロットを作成
+        for day_offset in range(7):  # 1週間分、7日間のタイムスロットを作成
+            day_start = start_of_week + timedelta(days=day_offset)
+            weekday_name = weekday_names[day_start.weekday()]
+
+            # その曜日の営業時間を取得
+            day_opening = getattr(cafe_table.cafe, f"{weekday_name}_open")
+            day_closing = getattr(cafe_table.cafe, f"{weekday_name}_close")
+
+            # デフォルトの時間帯でタイムスロットを作成
+            current_time = timezone.make_aware(datetime.combine(day_start, default_opening))
+            end_time = timezone.make_aware(datetime.combine(day_start, default_closing))
+
+            while current_time < end_time:
+                next_time = current_time + timedelta(minutes=60)
+                if next_time > end_time:
+                    next_time = end_time
+
+                # タイムスロットが営業時間内かどうかを判定
+                is_closed = True  # デフォルトは閉店状態
+
+                if day_opening is not None and day_closing is not None:
+                    # 営業日の場合、時間帯をチェック
+                    slot_time = current_time.time()
+                    if day_opening <= slot_time < day_closing:
+                        is_closed = False
+
+                # タイムスロットを作成
+                TableTimeSlot.objects.create(
+                    table=cafe_table,
+                    timeslot_range=(current_time, next_time),
+                    is_closed=is_closed
+                )
+
+                current_time = next_time
 
 
 def try_optimize(request):

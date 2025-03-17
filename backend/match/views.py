@@ -29,6 +29,7 @@ from accounts.permissions import IsCustomUser,IsCustomUserOrIsStaffUser
 from cafes.models import TableTimeSlot,CafeTable,Reservation,ReservationTimeSlot,Participant,CafeGameRelation,Message,SuggestGame
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
+from rest_framework import status
 
 class BoardGamePagination(PageNumberPagination):
     page_size = 12  # 1ページあたりのボードゲーム数
@@ -56,29 +57,60 @@ class UserGameRelationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # ログイン中のユーザーに関連するUserGameRelationを返す
         user = self.request.user
-        return UserGameRelation.objects.filter(user=user,want_to_play=True)
-    def perform_create(self, serializer):
-        # 現在のユーザーを自動的に設定
-        user = self.request.user
-        customuser = CustomUser.objects.get(username=user.username)
-        serializer.save(user=customuser)
+        return UserGameRelation.objects.filter(user=user)
 
-    def get_object(self):
-        print(f"リクエストされたpk: {self.kwargs.get('pk')}")
-        return super().get_object()
-    
-    def destroy(self, request, *args, **kwargs):
-        # インスタンスの所有者チェック
-        instance = self.get_object()
-        print(f"削除するインスタンス: {instance}")  # インスタンスのログを出力
+    def partial_update(self, request, *args, **kwargs):
+        # 現在のユーザーを取得
         user = self.request.user
         customuser = CustomUser.objects.get(username=user.username)
-        if instance.user != customuser:
-            return Response(
-                {"detail": "You do not have permission to delete this object."},
-                status=status.HTTP_403_FORBIDDEN
+        
+        # ゲームIDを取得 (URLのpkパラメータから)
+        game_id = kwargs.get('pk')
+        
+        try:
+            # 対象のゲーム取得
+            game = BoardGame.objects.get(pk=game_id)
+            
+            # 既存の関係を探す、なければ新規作成
+            relation, created = UserGameRelation.objects.get_or_create(
+                user=customuser,
+                game=game,
+                defaults={
+                    'can_instruct': False,
+                    'want_to_play': False,
+                    'not_for_me': False,
+                    'is_having': False
+                }
             )
-        return super().destroy(request, *args, **kwargs)
+            
+            # リクエストデータから更新するフィールドを取得
+            update_fields = {}
+            for field in ['can_instruct', 'want_to_play', 'not_for_me', 'is_having']:
+                if field in request.data:
+                    update_fields[field] = request.data[field]
+            
+            # フィールドを更新
+            for field, value in update_fields.items():
+                setattr(relation, field, value)
+            
+            # 保存
+            relation.save()
+            
+            # 全てのフィールドがFalseになった場合、レコードを削除
+            relation.delete_if_all_false()
+            
+            # 更新/削除後のオブジェクトをシリアライズして返す
+            if relation.pk:  # 削除されていない場合
+                serializer = self.get_serializer(relation)
+                return Response(serializer.data)
+            else:  # 削除された場合
+                return Response(status=status.HTTP_204_NO_CONTENT)
+                
+        except BoardGame.DoesNotExist:
+            return Response(
+                {"detail": "Game not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class UserFreeDayViewSet(viewsets.ModelViewSet):

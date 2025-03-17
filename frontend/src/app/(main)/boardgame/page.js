@@ -122,6 +122,7 @@ export default function Home() {
 
   const handleRelationChange = async (gameId, property, checked) => {
     try {
+      // 楽観的UIアップデート - 即座にUIを更新
       const currentRelation = gameRelations[gameId] || {
         want_to_play: false,
         can_instruct: false,
@@ -130,98 +131,50 @@ export default function Home() {
         relationId: null,
       }
 
-      // Create a new relation object with the updated property
+      // 新しい状態を作成
       const updatedRelation = {
         ...currentRelation,
         [property]: checked,
       }
 
-      // If turning ON a property
-      if (checked) {
-        // If we already have a relation, delete it first
-        if (currentRelation.relationId) {
-          await axios.delete(`http://localhost:8000/match/api/user_game_relations/${currentRelation.relationId}/`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          })
-        }
-
-        // Create a new relation with the updated property
-        const response = await axios.post(
-          "http://localhost:8000/match/api/user_game_relations/",
-          {
-            game: gameId,
-            want_to_play: updatedRelation.want_to_play,
-            can_instruct: updatedRelation.can_instruct,
-            not_for_me: updatedRelation.not_for_me,
-            is_having: updatedRelation.is_having,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        )
-
-        // Update the relation ID
-        updatedRelation.relationId = response.data.id
-      }
-      // If turning OFF a property
-      else {
-        // If we have a relation, delete it
-        if (currentRelation.relationId) {
-          await axios.delete(`http://localhost:8000/match/api/user_game_relations/${currentRelation.relationId}/`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          })
-
-          // If there are other properties still ON, create a new relation
-          if (
-            updatedRelation.want_to_play ||
-            updatedRelation.can_instruct ||
-            updatedRelation.not_for_me ||
-            updatedRelation.is_having
-          ) {
-            const response = await axios.post(
-              "http://localhost:8000/match/api/user_game_relations/",
-              {
-                game: gameId,
-                want_to_play: updatedRelation.want_to_play,
-                can_instruct: updatedRelation.can_instruct,
-                not_for_me: updatedRelation.not_for_me,
-                is_having: updatedRelation.is_having,
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              },
-            )
-
-            // Update the relation ID
-            updatedRelation.relationId = response.data.id
-          } else {
-            // If all properties are OFF, set relationId to null
-            updatedRelation.relationId = null
-          }
-        }
-      }
-
-      // Update state
+      // UIを先に更新
       setGameRelations((prev) => ({
         ...prev,
         [gameId]: updatedRelation,
       }))
+
+      // バックエンドにPATCHリクエストを送信（gameIdをURLに含める）
+      await axios.patch(
+        `http://localhost:8000/match/api/user_game_relations/${gameId}/`,
+        {
+          [property]: checked,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+
+      // 成功した場合、最新の関係データを取得（オプション）
+      // await fetchUserGameRelations()
     } catch (error) {
       console.error("スイッチ操作エラー:", error)
-      // Revert the switch state on error
+
+      // エラーが発生した場合、UIを元の状態に戻す
+      const currentRelation = gameRelations[gameId] || {
+        want_to_play: false,
+        can_instruct: false,
+        not_for_me: false,
+        is_having: false,
+        relationId: null,
+      }
+
       setGameRelations((prev) => ({
         ...prev,
         [gameId]: {
-          ...prev[gameId],
-          [property]: !checked,
+          ...currentRelation,
+          [property]: !checked, // 変更を元に戻す
         },
       }))
     }

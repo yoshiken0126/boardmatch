@@ -89,6 +89,13 @@ class UserGameRelation(models.Model):
     class Meta:
         unique_together = ('user', 'game', 'can_instruct','want_to_play','not_for_me','is_having')
 
+    def delete_if_all_false(self):
+        """
+        全てのフィールドが False の場合、このインスタンスを削除する
+        """
+        if not any([self.can_instruct, self.want_to_play, self.not_for_me, self.is_having]):
+            self.delete()
+
 
 class MatchDay(models.Model):
     day = DateTimeField(null=True)

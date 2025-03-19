@@ -46,6 +46,7 @@ class ReservationSerializer(serializers.ModelSerializer):
 
     # カフェ名を取得するためのフィールドを追加
     cafe_name = serializers.SerializerMethodField()
+    game_class_name = serializers.SerializerMethodField()
 
     def get_table(self, obj):
         # timeslotに紐づくすべてのテーブルのIDをユニークに取得
@@ -57,6 +58,10 @@ class ReservationSerializer(serializers.ModelSerializer):
     def get_cafe_name(self, obj):
         # カフェの名前を取得（カフェが存在する場合）
         return obj.cafe.name if obj.cafe else None
+
+    def get_game_class_name(self, obj):
+        # game_classが存在する場合、nameを返す
+        return obj.game_class.name if obj.game_class else None
 
     def to_representation(self, instance):
         # ユーザータイプを取得
@@ -79,7 +84,7 @@ class ReservationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Reservation
-        fields = ['id', 'cafe', 'cafe_name', 'table', 'count', 'reserved_at', 'reservation_type', 'start_time', 'end_time', 'participants','max_participants', 'is_active','is_recruiting','game_class','choice_game','play_game']
+        fields = ['id', 'cafe', 'cafe_name', 'table', 'count', 'reserved_at', 'reservation_type', 'start_time', 'end_time', 'participants','max_participants', 'is_active','is_recruiting','game_class','game_class_name','choice_game','play_game']
     
 
 

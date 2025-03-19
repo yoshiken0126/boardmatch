@@ -14,6 +14,7 @@ from accounts.permissions import IsStaffUser,IsCustomUser
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from django.utils import timezone
 
 
 
@@ -97,6 +98,8 @@ class ReservationViewSet(viewsets.ModelViewSet):
         # カスタムユーザーの場合、ユーザーが参加している予約のみ取得
         if user_type == 'custom_user':
             queryset = self.get_queryset().filter(user_relations__user=user, is_active=True)
+            today = timezone.now().date()
+            queryset = queryset.filter(timeslot__timeslot_range__overlap=(today, None)).distinct()
         else:
             queryset = self.get_queryset()
 

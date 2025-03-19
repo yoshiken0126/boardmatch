@@ -29,7 +29,8 @@ const formatReservation = (reservation) => {
     date: reservation.start_time,
     timeSlot: formatTimeSlot(reservation.start_time, reservation.end_time),
     numberOfPeople: reservation.count,
-    participants: reservation.participants
+    participants: reservation.participants,
+    gameClassName: reservation.game_class_name,
   }
 }
 
@@ -52,15 +53,15 @@ const BottomNavigation = () => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          
         })
-        
+        console.log(response)
+
         // APIレスポンスから予約データを整形
         if (response?.data) {
           const formattedReservations = response.data
-            .filter(reservation => reservation.is_active)
+            .filter((reservation) => reservation.is_active)
             .map(formatReservation)
-          
+
           setReservations(formattedReservations)
         } else {
           setError("予約データの形式が不正です。")
@@ -83,22 +84,22 @@ const BottomNavigation = () => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       // メニューボタンのクリックは無視
-      if (event.target.closest('button[data-reservation-button]')) {
+      if (event.target.closest("button[data-reservation-button]")) {
         return
       }
-      
+
       // メニュー以外の場所をクリックした場合、メニューを閉じる
-      if (!event.target.closest('[data-reservation-menu]')) {
+      if (!event.target.closest("[data-reservation-menu]")) {
         closeMenu()
       }
     }
 
     if (isReservationMenuOpen) {
-      document.addEventListener('click', handleClickOutside)
+      document.addEventListener("click", handleClickOutside)
     }
 
     return () => {
-      document.removeEventListener('click', handleClickOutside)
+      document.removeEventListener("click", handleClickOutside)
     }
   }, [isReservationMenuOpen])
 
@@ -162,7 +163,7 @@ const BottomNavigation = () => {
       </nav>
 
       {isReservationMenuOpen && (
-        <div 
+        <div
           data-reservation-menu
           className="fixed bottom-16 left-0 right-0 bg-background border-t border-border z-20 p-4 max-h-[60vh] overflow-y-auto"
         >
@@ -178,16 +179,19 @@ const BottomNavigation = () => {
                 className="block py-3 px-4 hover:bg-accent rounded-md mb-3 transition-colors duration-200"
               >
                 <div className="text-base font-medium mb-1">{reservation.cafeName}</div>
-                <div className="text-sm text-muted-foreground flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">
                   <span>
                     {formatDate(reservation.date)}
                     <span className="mx-2"> </span>
                     {reservation.timeSlot}
                   </span>
-                  <span className="text-primary">予約人数 {reservation.numberOfPeople}人</span>
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  参加者: {reservation.participants.map(p => p.user).join(", ")}
+                <div className="text-sm text-muted-foreground flex justify-between items-center mt-1">
+                  <span>
+                    {reservation.gameClassName ? reservation.gameClassName : "参加者"}:
+                    {reservation.participants.map((p) => p.user).join(", ")}
+                  </span>
+                  <span className="text-primary">予約人数 {reservation.numberOfPeople}人</span>
                 </div>
               </Link>
             ))
@@ -199,3 +203,4 @@ const BottomNavigation = () => {
 }
 
 export default BottomNavigation
+

@@ -337,6 +337,9 @@ def run_optimization():
         print(val_x)
     
     create_all_cafes_six_weeks_later_timeslots()
+    
+    users_update_false = CustomUser.objects.filter(is_optimize_active=True)
+    users_update_false.update(is_optimize_active=False)
 
 
                 

@@ -17,7 +17,7 @@ import { Menu, Blocks, ChevronDown, Medal } from "lucide-react"
 import { useAuth } from "@/app/context/AuthContext"
 import { Switch } from "@/components/ui/switch"
 import { getToken } from "@/lib/auth"
-
+import { getApiBaseUrl } from "@/lib/apiConfig"
 
 // Update the UserDropdown component to use the fetched user data
 function UserDropdown({ userData, logout, updateUserGameClass }) {
@@ -51,7 +51,7 @@ function UserDropdown({ userData, logout, updateUserGameClass }) {
       }
       updatedClasses = currentClasses.filter((c) => c !== gameClass)
     }
-  
+
     const success = await updateUserGameClass(updatedClasses)
     return success
   }
@@ -138,7 +138,8 @@ export default function Navbar() {
       const userId = JSON.parse(atob(token.split(".")[1])).user_id
       console.log("User ID:", userId)
 
-      const response = await axios.get(`http://localhost:8000/match/api/user_info/${userId}/`, {
+      const apiBaseUrl = getApiBaseUrl()
+      const response = await axios.get(`${apiBaseUrl}/match/api/user_info/${userId}/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -167,8 +168,9 @@ export default function Navbar() {
         },
       }
 
+      const apiBaseUrl = getApiBaseUrl()
       const response = await axios.patch(
-        `http://localhost:8000/match/api/user_info/${userId}/`,
+        `${apiBaseUrl}/match/api/user_info/${userId}/`,
         { is_optimize_active: checked },
         config,
       )
@@ -194,13 +196,14 @@ export default function Navbar() {
           Authorization: `Bearer ${token}`,
         },
       }
-  
+
+      const apiBaseUrl = getApiBaseUrl()
       const response = await axios.patch(
-        `http://localhost:8000/match/api/user_game_class/${userId}/`,
+        `${apiBaseUrl}/match/api/user_game_class/${userId}/`,
         { game_class: gameClasses },
         config,
       )
-  
+
       if (response.status === 200) {
         console.log("ユーザーのゲームクラスが更新されました", response.data)
         setUserData((prev) => ({
@@ -223,8 +226,9 @@ export default function Navbar() {
   const handleJoin = async (reservationId) => {
     try {
       const token = getToken()
+      const apiBaseUrl = getApiBaseUrl()
       const response = await axios.post(
-        `http://localhost:8000/match/api/participants/${reservationId}/add_participant/`,
+        `${apiBaseUrl}/match/api/participants/${reservationId}/add_participant/`,
         {},
         {
           headers: {
@@ -254,7 +258,8 @@ export default function Navbar() {
     const fetchData = async () => {
       try {
         const token = getToken()
-        const response = await axios.get("http://localhost:8000/match/api/participants/", {
+        const apiBaseUrl = getApiBaseUrl()
+        const response = await axios.get(`${apiBaseUrl}/match/api/participants/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -367,35 +372,45 @@ export default function Navbar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
-          <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
-            {userData ? (
-              <span className="text-sm font-medium text-gray-700">
-                {isOptimizeActive ? `${userData.username}さんは卓待ち中です` : `ようこそ、${userData.username}さん`}
-              </span>
-            ) : (
-              <span className="text-sm font-medium text-gray-700">ローディング中...</span>
+
+            {/* ステータスメッセージをサービス名の右隣に配置 */}
+            {userData && (
+              <div className="ml-4 hidden sm:block">
+                <span className="text-sm font-medium text-gray-700">
+                  {isOptimizeActive ? `${userData.username}さんは卓待ち中です` : `ようこそ、${userData.username}さん`}
+                </span>
+              </div>
             )}
-            {userData && <UserDropdown userData={userData} logout={logout} updateUserGameClass={updateUserGameClass} />}
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="ml-4">
+          {/* 右側のコントロール */}
+          <div className="flex items-center space-x-3">
+            {/* スイッチを少し小さくして右側に配置 */}
+            <div className="flex items-center">
               <Switch
                 checked={isOptimizeActive}
                 onCheckedChange={handleSwitchChange}
                 className={`${
                   isOptimizeActive ? "bg-black" : "bg-gray-200"
-                } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                } relative inline-flex h-5 w-10 items-center rounded-full transition-colors`}
               >
                 <span className="sr-only">最適化機能を有効にする</span>
                 <span
                   className={`${
-                    isOptimizeActive ? "translate-x-6" : "translate-x-1"
-                  } inline-block h-4 w-4 transform rounded-full bg-white transition`}
+                    isOptimizeActive ? "translate-x-5" : "translate-x-1"
+                  } inline-block h-3 w-3 transform rounded-full bg-white transition`}
                 />
               </Switch>
             </div>
+
+            {/* ユーザーアイコンを右端に配置 */}
+            {userData && (
+              <div className="hidden sm:block">
+                <UserDropdown userData={userData} logout={logout} updateUserGameClass={updateUserGameClass} />
+              </div>
+            )}
+
+            {/* モバイルメニュー */}
             <div className="flex items-center sm:hidden">
               <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                 <DropdownMenuTrigger asChild>
@@ -455,11 +470,7 @@ export default function Navbar() {
                                   } else {
                                     // 少なくとも1つのクラスは残す必要がある
                                     if (currentClasses.length <= 1) {
-                                      toast({
-                                        title: "エラー",
-                                        description: "少なくとも1つのクラスに所属する必要があります",
-                                        variant: "destructive",
-                                      })
+                                      console.error("少なくとも1つのクラスに所属する必要があります")
                                       return
                                     }
                                     updatedClasses = currentClasses.filter((c) => c !== gameClass)

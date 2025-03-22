@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Coffee, Hexagon, Hourglass, UserRound, Shrink } from "lucide-react"
 import { getToken } from "@/lib/auth"
 import axios from "axios"
+import { getApiBaseUrl } from "@/lib/apiConfig"
 
 // 日付と時間をフォーマットする関数
 const formatDate = (dateString) => {
@@ -40,6 +41,7 @@ const BottomNavigation = () => {
   const [isReservationMenuOpen, setIsReservationMenuOpen] = useState(false)
   const [reservations, setReservations] = useState([])
   const [error, setError] = useState("")
+  const apiBaseUrl = getApiBaseUrl()
 
   useEffect(() => {
     setActiveTab(pathname || "/")
@@ -49,7 +51,12 @@ const BottomNavigation = () => {
     const fetchReservations = async () => {
       try {
         const token = getToken()
-        const response = await axios.get("http://localhost:8000/cafes/api/reservations/", {
+        // スラッシュの重複を避けるためにURLを適切に構築
+        const url = apiBaseUrl.endsWith("/")
+          ? `${apiBaseUrl}cafes/api/reservations/`
+          : `${apiBaseUrl}/cafes/api/reservations/`
+
+        const response = await axios.get(url, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -73,7 +80,7 @@ const BottomNavigation = () => {
     }
 
     fetchReservations()
-  }, [])
+  }, [apiBaseUrl])
 
   // メニューを閉じるための関数
   const closeMenu = () => {

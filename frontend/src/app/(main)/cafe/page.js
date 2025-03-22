@@ -19,11 +19,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { getToken } from "@/lib/auth"
 import { addDays, startOfWeek, endOfWeek, isWithinInterval } from "date-fns"
+import { getApiBaseUrl } from "@/lib/apiConfig"
 
 export default function Home() {
   const [cafes, setCafes] = useState([])
   const [userCafes, setUserCafes] = useState([])
   const token = getToken()
+  const apiBaseUrl = getApiBaseUrl()
   const [switchStates, setSwitchStates] = useState({})
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedCafe, setSelectedCafe] = useState(null)
@@ -47,7 +49,7 @@ export default function Home() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8000/match/api/cafe_list/")
+      .get(`${apiBaseUrl}/match/api/cafe_list/`)
       .then((response) => {
         setCafes(response.data)
         console.log(response)
@@ -57,7 +59,7 @@ export default function Home() {
       })
 
     axios
-      .get("http://localhost:8000/match/api/user_cafe_relations/", {
+      .get(`${apiBaseUrl}/match/api/user_cafe_relations/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -73,21 +75,21 @@ export default function Home() {
       .catch((error) => {
         console.error("ユーザーのカフェ関係の取得中にエラーが発生しました:", error)
       })
-  }, [token])
+  }, [token, apiBaseUrl])
 
   const fetchGamesByPlayerClass = async (cafeId, playerClass) => {
     try {
       const [cafeGamesResponse, personalGamesResponse] = await Promise.all([
-        axios.get(`http://localhost:8000/match/api/cafe_have_games/${cafeId}/${playerClass}/`, {
+        axios.get(`${apiBaseUrl}/match/api/cafe_have_games/${cafeId}/${playerClass}/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get(`http://localhost:8000/match/api/user_have_games/${playerClass}/`, {
+        axios.get(`${apiBaseUrl}/match/api/user_have_games/${playerClass}/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ])
 
-      console.log("Cafe Games Response:", cafeGamesResponse.data);
-      console.log("Personal Games Response:", personalGamesResponse.data);
+      console.log("Cafe Games Response:", cafeGamesResponse.data)
+      console.log("Personal Games Response:", personalGamesResponse.data)
 
       setCafeGames(cafeGamesResponse.data)
       setPersonalGames(personalGamesResponse.data)
@@ -103,7 +105,7 @@ export default function Home() {
 
       if (existingRelation) {
         const response = await axios.patch(
-          `http://localhost:8000/match/api/user_cafe_relations/${existingRelation.id}/`,
+          `${apiBaseUrl}/match/api/user_cafe_relations/${existingRelation.id}/`,
           { can_visit: checked },
           {
             headers: {
@@ -120,7 +122,7 @@ export default function Home() {
         )
       } else {
         const response = await axios.post(
-          "http://localhost:8000/match/api/user_cafe_relations/",
+          `${apiBaseUrl}/match/api/user_cafe_relations/`,
           { cafe: cafeId, can_visit: checked },
           {
             headers: {
@@ -224,7 +226,7 @@ export default function Home() {
     }
 
     try {
-      const response = await axios.post("http://localhost:8000/match/api/reservations/", reservationData, {
+      const response = await axios.post(`${apiBaseUrl}/match/api/reservations/`, reservationData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -372,9 +374,7 @@ export default function Home() {
     setPlayerClass(newClass)
     setSelectedCafeGames([])
     setSelectedPersonalGames([])
-    setAlertMessage(
-      "",
-    )
+    setAlertMessage("")
     if (selectedCafe) {
       await fetchGamesByPlayerClass(selectedCafe.id, newClass)
     }

@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { getToken } from "@/lib/auth"
+import { getApiBaseUrl } from "@/lib/apiConfig"
 import { Edit } from "lucide-react"
 
 export default function Home() {
   const [userFollows, setUserFollows] = useState([])
   const token = getToken()
+  const apiBaseUrl = getApiBaseUrl()
   const [switchStates, setSwitchStates] = useState({})
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingMemo, setEditingMemo] = useState("")
@@ -21,7 +23,7 @@ export default function Home() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8000/match/api/user_relations/", {
+      .get(`${apiBaseUrl}/match/api/user_relations/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -40,7 +42,7 @@ export default function Home() {
       .catch((error) => {
         console.error("ユーザーのフォロー関係の取得中にエラーが発生しました:", error)
       })
-  }, [token])
+  }, [token, apiBaseUrl])
 
   const handleSwitchChange = async (relationId, toUserId, checked) => {
     try {
@@ -48,7 +50,7 @@ export default function Home() {
 
       if (existingRelation) {
         const response = await axios.patch(
-          `http://localhost:8000/match/api/user_relations/${relationId}/`,
+          `${apiBaseUrl}/match/api/user_relations/${relationId}/`,
           { may_follow: checked },
           {
             headers: {
@@ -86,7 +88,7 @@ export default function Home() {
   const handleSaveMemo = async () => {
     try {
       const response = await axios.patch(
-        `http://localhost:8000/match/api/user_relations/${editingRelationId}/`,
+        `${apiBaseUrl}/match/api/user_relations/${editingRelationId}/`,
         { memo: editingMemo },
         {
           headers: {
@@ -181,9 +183,4 @@ export default function Home() {
     </div>
   )
 }
-
-
-
-
-
 

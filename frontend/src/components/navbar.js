@@ -313,7 +313,7 @@ export default function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Link href="/" className="flex items-center text-2xl font-bold tracking-tight">
                     <span className="text-primary">卓</span>
-                    <span className="text-gray-500 italic">match</span>
+                    <span className="text-gray-500 italic">match(α)</span>
                     <Blocks className="h-6 w-6 ml-1" />
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </Link>

@@ -6,6 +6,8 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sun, Moon } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { getApiBaseUrl } from "@/lib/apiConfig"
+import { getToken } from "@/lib/auth"
 
 export default function FreetimeSchedule() {
   const [freedays, setFreedays] = useState([])
@@ -16,14 +18,16 @@ export default function FreetimeSchedule() {
     week3: {},
     week4: {},
   })
+  const apiBaseUrl = getApiBaseUrl()
+  const token = getToken()
 
   // Fetch free days data from the API
   useEffect(() => {
     const fetchFreeDays = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/match/api/user_freedays/", {
+        const response = await axios.get(`${apiBaseUrl}/match/api/user_freedays/`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${token}`,
           },
         })
         setFreedays(response.data)
@@ -33,7 +37,7 @@ export default function FreetimeSchedule() {
     }
 
     fetchFreeDays()
-  }, [])
+  }, [apiBaseUrl, token])
 
   // Calculate dates for the next 4 weeks
   useEffect(() => {
@@ -79,16 +83,15 @@ export default function FreetimeSchedule() {
         if (checked) {
           // Create new entry if checked is true
           await axios.post(
-            "http://localhost:8000/match/api/user_freedays/",
+            `${apiBaseUrl}/match/api/user_freedays/`,
             {
               freeday: date,
               [timeSlot]: true,
               [timeSlot === "daytime" ? "nighttime" : "daytime"]: false, // Set the other timeslot to false by default
-              
             },
             {
               headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                Authorization: `Bearer ${token}`,
               },
             },
           )
@@ -98,18 +101,18 @@ export default function FreetimeSchedule() {
 
           if (existingEntry) {
             // Delete the entry
-            await axios.delete(`http://localhost:8000/match/api/user_freedays/${existingEntry.id}/`, {
+            await axios.delete(`${apiBaseUrl}/match/api/user_freedays/${existingEntry.id}/`, {
               headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
+                Authorization: `Bearer ${token}`,
               },
             })
           }
         }
 
         // Refresh data after update
-        const response = await axios.get("http://localhost:8000/match/api/user_freedays/", {
+        const response = await axios.get(`${apiBaseUrl}/match/api/user_freedays/`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${token}`,
           },
         })
         setFreedays(response.data)
@@ -121,7 +124,7 @@ export default function FreetimeSchedule() {
         setFreedays(updatedFreedays)
       }
     },
-    [freedays],
+    [freedays, apiBaseUrl, token],
   )
 
   const dayNames = {

@@ -3,7 +3,7 @@ from .models import CustomUser,CafeStaff
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class CustomUserSerializer(serializers.ModelSerializer): #追記　Userのシリアライザー
-    game_class = serializers.StringRelatedField(many=True)
+    game_class = serializers.StringRelatedField(many=True,required=False)
     
     class Meta:
         model = CustomUser

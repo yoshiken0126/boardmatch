@@ -43,7 +43,7 @@ export default function LoginFormJsx() {
           <div className="flex justify-center">
             <div className="flex items-center text-2xl font-bold tracking-tight">
               <span className="text-primary">卓</span>
-              <span className="text-gray-500 italic">match</span>
+              <span className="text-gray-500 italic">match(α)</span>
               <Blocks className="h-6 w-6 ml-1" />
             </div>
           </div>

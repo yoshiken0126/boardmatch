@@ -17,6 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import Image from "next/image"
 import { jwtDecode } from "jwt-decode"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { getApiBaseUrl } from "@/lib/apiConfig"
+import { getToken } from "@/lib/auth"
 
 // システムメッセージカードコンポーネント（改良版）
 const SystemMessageCard = ({ content, sentAt }) => {
@@ -110,6 +112,7 @@ const RuleApprovalCard = ({ content, sentAt, messageId, onAccept, onDecline }) =
 
 // ゲーム提案メッセージコンポーネント
 const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
+  const apiBaseUrl = getApiBaseUrl()
   const game = message.suggest_game.suggest_game
   const participants = message.suggest_game.participants
   const instructors = message.suggest_game.instructors
@@ -186,7 +189,7 @@ const GameSuggestionMessage = ({ message, onAccept, onDecline }) => {
           <div className="flex-shrink-0 w-full sm:w-[150px] h-[120px] sm:h-[150px] bg-gray-200 rounded-md overflow-hidden">
             {game.box_image ? (
               <Image
-                src={`http://localhost:8000${game.box_image}`}
+                src={`${apiBaseUrl}${game.box_image}`}
                 alt={`${game.name} ボックスアート`}
                 width={300}
                 height={300}
@@ -295,6 +298,8 @@ const GameSuggestionComponent = ({ open, setOpen, setMessages }) => {
   const [personalGames, setPersonalGames] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const { id } = useParams() // 予約IDを取得
+  const apiBaseUrl = getApiBaseUrl()
+  const token = getToken()
 
   // クラス値のマッピング関数を追加
   const mapClassToApiParam = (displayClass) => {
@@ -322,13 +327,12 @@ const GameSuggestionComponent = ({ open, setOpen, setMessages }) => {
   const fetchCafeGames = async (playerClass = "all") => {
     try {
       setIsLoading(true)
-      const token = getToken()
 
       // 日本語のクラス名をAPI用のパラメータに変換
       const classParam = mapClassToApiParam(playerClass)
 
       // 予約IDを使用してAPIを呼び出す
-      const response = await axios.get(`http://localhost:8000/cafes/api/cafe_have_suggest_games/${id}/${classParam}/`, {
+      const response = await axios.get(`${apiBaseUrl}/cafes/api/cafe_have_suggest_games/${id}/${classParam}/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -349,14 +353,13 @@ const GameSuggestionComponent = ({ open, setOpen, setMessages }) => {
   const fetchPersonalGames = async () => {
     try {
       setIsLoading(true)
-      const token = getToken()
       const userId = getCurrentUserId()
 
       // 日本語のクラス名をAPI用のパラメータに変換
       const classParam = mapClassToApiParam(selectedClass)
 
       // 予約IDとユーザーIDを使用してAPIを呼び出す
-      const response = await axios.get(`http://localhost:8000/cafes/api/user_have_suggest_games/${id}/${classParam}/`, {
+      const response = await axios.get(`${apiBaseUrl}/cafes/api/user_have_suggest_games/${id}/${classParam}/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -415,11 +418,9 @@ const GameSuggestionComponent = ({ open, setOpen, setMessages }) => {
     if (!selectedGame) return
 
     try {
-      const token = getToken()
-
       // ゲーム提案のAPIを呼び出す - sourceパラメータを削除
       await axios.post(
-        "http://localhost:8000/cafes/api/suggest_games/",
+        `${apiBaseUrl}/cafes/api/suggest_games/`,
         {
           reservation: id,
           game: activeTab === "cafe" ? selectedGame.game.id : selectedGame.game.id,
@@ -439,7 +440,7 @@ const GameSuggestionComponent = ({ open, setOpen, setMessages }) => {
       setSearchQuery("")
 
       // メッセージを再取得して画面を更新
-      const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+      const response = await axios.get(`${apiBaseUrl}/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -569,7 +570,7 @@ const GameSuggestionComponent = ({ open, setOpen, setMessages }) => {
                         {game.box_image && (
                           <div className="mt-2 w-full h-16 sm:h-20 bg-gray-100 rounded overflow-hidden">
                             <Image
-                              src={`http://localhost:8000${game.box_image}`}
+                              src={`${apiBaseUrl}${game.box_image}`}
                               alt={`${game.name} ボックスアート`}
                               width={80}
                               height={80}
@@ -657,7 +658,7 @@ const GameSuggestionComponent = ({ open, setOpen, setMessages }) => {
                         {game.box_image && (
                           <div className="mt-2 w-full h-16 sm:h-20 bg-gray-100 rounded overflow-hidden">
                             <Image
-                              src={`http://localhost:8000${game.box_image}`}
+                              src={`${apiBaseUrl}${game.box_image}`}
                               alt={`${game.name} ボックスアート`}
                               width={80}
                               height={80}
@@ -694,10 +695,10 @@ const GameSuggestionComponent = ({ open, setOpen, setMessages }) => {
 }
 
 // ローカルストレージからトークンを取得する関数
-const getToken = () => {
-  const token = localStorage.getItem("token")
-  return token
-}
+// const getToken = () => {
+//   const token = localStorage.getItem("token")
+//   return token
+// }
 
 // Add this function to get the current user ID from the token:
 const getCurrentUserId = () => {
@@ -728,6 +729,8 @@ export default function ChatComponent() {
   const [gameSuggestionOpen, setGameSuggestionOpen] = useState(false)
   const { id } = useParams()
   const scrollAreaRef = useRef(null)
+  const apiBaseUrl = getApiBaseUrl()
+  const token = getToken()
 
   useEffect(() => {
     // 現在のユーザー名を取得
@@ -737,8 +740,7 @@ export default function ChatComponent() {
     const fetchMessages = async () => {
       try {
         setIsLoading(true)
-        const token = getToken()
-        const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+        const response = await axios.get(`${apiBaseUrl}/cafes/api/messages/?reservation_id=${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -754,7 +756,7 @@ export default function ChatComponent() {
     }
 
     fetchMessages()
-  }, [id])
+  }, [id, apiBaseUrl, token])
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -766,9 +768,8 @@ export default function ChatComponent() {
     if (!newMessage.trim()) return
 
     try {
-      const token = getToken()
       await axios.post(
-        "http://localhost:8000/cafes/api/messages/",
+        `${apiBaseUrl}/cafes/api/messages/`,
         {
           reservation: id,
           content: newMessage,
@@ -781,7 +782,7 @@ export default function ChatComponent() {
       )
       setNewMessage("")
 
-      const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+      const response = await axios.get(`${apiBaseUrl}/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -795,13 +796,12 @@ export default function ChatComponent() {
 
   const handleAcceptGame = async (message) => {
     try {
-      const token = getToken()
       // 修正: suggest_gameのIDを正しく取得する
       const suggestGameId = message.suggest_game.id
 
       // 新しいエンドポイントを使用してゲーム参加を登録
       await axios.post(
-        "http://localhost:8000/cafes/api/suggest_game_participants/",
+        `${apiBaseUrl}/cafes/api/suggest_game_participants/`,
         {
           suggest_game: suggestGameId,
           is_accepted: true,
@@ -814,7 +814,7 @@ export default function ChatComponent() {
       )
 
       // メッセージを再取得して画面を更新
-      const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+      const response = await axios.get(`${apiBaseUrl}/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -827,13 +827,12 @@ export default function ChatComponent() {
 
   const handleDeclineGame = async (message) => {
     try {
-      const token = getToken()
       // 修正: suggest_gameのIDを正しく取得する
       const suggestGameId = message.suggest_game.id
 
       // 新しいエンドポイントを使用してゲーム参加を辞退
       await axios.post(
-        "http://localhost:8000/cafes/api/suggest_game_participants/",
+        `${apiBaseUrl}/cafes/api/suggest_game_participants/`,
         {
           suggest_game: suggestGameId,
           is_accepted: false,
@@ -846,7 +845,7 @@ export default function ChatComponent() {
       )
 
       // メッセージを再取得して画面を更新
-      const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+      const response = await axios.get(`${apiBaseUrl}/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -859,11 +858,9 @@ export default function ChatComponent() {
 
   const handleAcceptRuleExplanation = async (suggestGameId) => {
     try {
-      const token = getToken()
-
       // suggest_gameのIDを使用してルール説明担当を承諾
       await axios.patch(
-        `http://localhost:8000/cafes/api/suggest_game_instructors/${suggestGameId}/accept/`,
+        `${apiBaseUrl}/cafes/api/suggest_game_instructors/${suggestGameId}/accept/`,
         {},
         {
           headers: {
@@ -873,7 +870,7 @@ export default function ChatComponent() {
       )
 
       // メッセージを再取得して画面を更新
-      const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+      const response = await axios.get(`${apiBaseUrl}/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -886,11 +883,9 @@ export default function ChatComponent() {
 
   const handleDeclineRuleExplanation = async (suggestGameId) => {
     try {
-      const token = getToken()
-
       // suggest_gameのIDを使用してルール説明担当を辞退
       await axios.patch(
-        `http://localhost:8000/cafes/api/suggest_game_instructors/${suggestGameId}/reject/`,
+        `${apiBaseUrl}/cafes/api/suggest_game_instructors/${suggestGameId}/reject/`,
         {},
         {
           headers: {
@@ -900,7 +895,7 @@ export default function ChatComponent() {
       )
 
       // メッセージを再取得して画面を更新
-      const response = await axios.get(`http://localhost:8000/cafes/api/messages/?reservation_id=${id}`, {
+      const response = await axios.get(`${apiBaseUrl}/cafes/api/messages/?reservation_id=${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -913,8 +908,7 @@ export default function ChatComponent() {
 
   const handleCancelReservation = async () => {
     try {
-      const token = getToken()
-      const response = await axios.delete(`http://localhost:8000/match/api/participants/${id}/remove_participant/`, {
+      const response = await axios.delete(`${apiBaseUrl}/match/api/participants/${id}/remove_participant/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -978,9 +972,7 @@ export default function ChatComponent() {
                         <Avatar className="mr-2 h-6 w-6 sm:h-8 sm:w-8">
                           <AvatarImage
                             src={
-                              message.sender_profile_picture
-                                ? `http://localhost:8000${message.sender_profile_picture}`
-                                : null
+                              message.sender_profile_picture ? `${apiBaseUrl}${message.sender_profile_picture}` : null
                             }
                             alt={message.sender}
                           />
@@ -1002,9 +994,7 @@ export default function ChatComponent() {
                         <Avatar className="ml-2 h-6 w-6 sm:h-8 sm:w-8">
                           <AvatarImage
                             src={
-                              message.sender_profile_picture
-                                ? `http://localhost:8000${message.sender_profile_picture}`
-                                : null
+                              message.sender_profile_picture ? `${apiBaseUrl}${message.sender_profile_picture}` : null
                             }
                             alt={message.sender}
                           />

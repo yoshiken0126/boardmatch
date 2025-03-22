@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
 import { getToken } from "@/lib/auth"
+import { getApiBaseUrl } from "@/lib/apiConfig"
 
 export default function Home() {
   const [boardgames, setBoardgames] = useState([])
@@ -20,11 +21,12 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true)
   const observerRef = useRef(null)
   const token = getToken()
+  const apiBaseUrl = getApiBaseUrl()
 
   const fetchBoardgames = async (pageNum) => {
     try {
       setLoading(true)
-      const boardgamesResponse = await axios.get(`http://localhost:8000/match/api/boardgames/?page=${pageNum}`)
+      const boardgamesResponse = await axios.get(`${apiBaseUrl}/match/api/boardgames/?page=${pageNum}`)
 
       // Check if we have more pages
       setHasMore(boardgamesResponse.data.next !== null)
@@ -40,6 +42,7 @@ export default function Home() {
     } catch (error) {
       setError(error.message)
       console.error("ボードゲーム取得エラー:", error)
+
       return []
     } finally {
       setLoading(false)
@@ -48,7 +51,7 @@ export default function Home() {
 
   const fetchUserGameRelations = async () => {
     try {
-      const userGamesResponse = await axios.get("http://localhost:8000/match/api/user_game_relations/", {
+      const userGamesResponse = await axios.get(`${apiBaseUrl}/match/api/user_game_relations/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -145,7 +148,7 @@ export default function Home() {
 
       // バックエンドにPATCHリクエストを送信（gameIdをURLに含める）
       await axios.patch(
-        `http://localhost:8000/match/api/user_game_relations/${gameId}/`,
+        `${apiBaseUrl}/match/api/user_game_relations/${gameId}/`,
         {
           [property]: checked,
         },

@@ -10,7 +10,7 @@ services:
     ports:
       - 3000:3000
     env_file:
-      - ./.env.dev
+      - ./.env
     environment:
       - WATCHPACK_POLLING=true
   backend:
@@ -25,11 +25,12 @@ services:
     depends_on:
       - db
     env_file:
-      - ./.env.dev
+      - ./.env
+    
   db:
     image: postgres
     env_file:
-      - ./.env.dev
+      - ./.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
 volumes:

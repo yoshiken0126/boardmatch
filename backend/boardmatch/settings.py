@@ -83,17 +83,28 @@ WSGI_APPLICATION = 'boardmatch.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+#DATABASES = {
+ #   'default': {
+  #      'ENGINE': 'django.db.backends.postgresql',
+   #     'NAME': 'postgres',
+    #   'PASSWORD': 'postgres',
+     #   'HOST': 'db',
+      #  'PORT': 5432,
+#    }
+#}
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'db',
-        'PORT': 5432,
+        'NAME': os.getenv('DATABASE_NAME', 'postgres'),
+        'USER': os.getenv('DATABASE_USER', 'postgres'),
+        'PASSWORD': os.getenv('DATABASE_PASSWORD', 'postgres'),
+        'HOST': os.getenv('DATABASE_HOST', 'db'),  # Docker内のdbサービスを参照
+        'PORT': os.getenv('DATABASE_PORT', '5432'),
     }
 }
 
+DJANGO_API_URL = os.getenv('DJANGO_API_URL', 'http://localhost:8000')
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
